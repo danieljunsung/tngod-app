@@ -16,16 +16,28 @@
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
         .day-name { text-align: center; font-weight: bold; font-size: 0.8rem; color: #888; padding-bottom: 10px; }
         
-        /* 날짜 칸에 마우스를 올리면 클릭할 수 있다는 표시(손가락 모양) 추가 */
-        .day { background: #fff; border: 1px solid #eee; min-height: 80px; padding: 5px; border-radius: 5px; display: flex; flex-direction: column; cursor: pointer; transition: 0.2s; }
+        .day { background: #fff; border: 1px solid #eee; min-height: 85px; padding: 5px; border-radius: 5px; display: flex; flex-direction: column; cursor: pointer; transition: 0.2s; }
         .day:hover { background: #f9f9f9; border-color: #ccc; }
         .day.empty { background: transparent; border: none; cursor: default; } 
         .day.today { background: #eef5ff; border: 2px solid var(--primary-color); }
-        .day-number { font-size: 0.9rem; font-weight: bold; color: #555; pointer-events: none; }
+        .day-number { font-size: 0.9rem; font-weight: bold; color: #555; pointer-events: none; margin-bottom: 5px; }
 
-        /* 수행평가 일정 스타일 */
-        .event { font-size: 0.7rem; padding: 4px; border-radius: 4px; margin-top: 3px; color: white; background-color: #4a90e2; line-height: 1.2; word-break: keep-all; text-align: center; }
-        .event:hover { opacity: 0.8; } /* 일정에 마우스 올렸을 때 효과 */
+        /* ✨ 수행평가 일정 스타일 업그레이드 ✨ */
+        .event { 
+            background-color: #4a90e2; color: white; border-radius: 4px; padding: 4px; margin-bottom: 3px;
+            display: flex; flex-direction: column; gap: 4px; /* 글자와 버튼 위아래 배치 */
+        }
+        .event-text { font-size: 0.75rem; font-weight: bold; word-break: keep-all; line-height: 1.2; text-align: center; }
+        
+        /* 버튼들을 담는 상자 */
+        .event-buttons { display: flex; justify-content: center; gap: 3px; }
+        
+        /* 수정, 삭제 버튼 디자인 */
+        .action-btn { 
+            background: rgba(255, 255, 255, 0.25); border: none; color: white; 
+            border-radius: 3px; font-size: 0.65rem; padding: 2px 6px; cursor: pointer; 
+        }
+        .action-btn:hover { background: rgba(255, 255, 255, 0.5); }
 
         .day-name:nth-child(1) { color: #e74c3c; } 
         .day-name:nth-child(7) { color: #4a90e2; } 
@@ -49,8 +61,6 @@
     const nextBtn = document.getElementById('nextBtn');
 
     let currentDate = new Date(); 
-    
-    // ⭐️ 내 기기의 저장소(localStorage)에서 저장된 일정 불러오기
     let savedEvents = JSON.parse(localStorage.getItem('myEvents')) || {};
 
     function renderCalendar(date) {
@@ -76,17 +86,24 @@
         for (let i = 1; i <= lastDate; i++) {
             let isToday = (year === today.getFullYear() && month === today.getMonth() && i === today.getDate()) ? 'today' : '';
             
-            // 저장된 일정이 있는지 확인하고 HTML로 만들기
-            const dateKey = `${year}-${month}-${i}`; // 예: 2026-3-15 (4월 15일)
+            const dateKey = `${year}-${month}-${i}`; 
             let eventHtml = '';
+            
+            // ⭐️ 일정이 있을 때, 일정 글자와 수정/삭제 버튼을 함께 만들어 줍니다.
             if (savedEvents[dateKey]) {
                 savedEvents[dateKey].forEach((eventText, index) => {
-                    // 일정을 클릭하면 삭제 함수(deleteEvent)가 실행되도록 설정
-                    eventHtml += `<div class="event" onclick="deleteEvent('${dateKey}', ${index}, event)">${eventText}</div>`;
+                    eventHtml += `
+                        <div class="event" onclick="event.stopPropagation()">
+                            <span class="event-text">${eventText}</span>
+                            <div class="event-buttons">
+                                <button class="action-btn" onclick="editEvent('${dateKey}', ${index}, event)">수정</button>
+                                <button class="action-btn" onclick="deleteEvent('${dateKey}', ${index}, event)">삭제</button>
+                            </div>
+                        </div>
+                    `;
                 });
             }
 
-            // 날짜 칸을 클릭하면 추가 함수(addEvent)가 실행되도록 설정
             calendarGrid.innerHTML += `
                 <div class="day ${isToday}" onclick="addEvent(${year}, ${month}, ${i})">
                     <span class="day-number" style="color: ${new Date(year, month, i).getDay() === 0 ? '#e74c3c' : (new Date(year, month, i).getDay() === 6 ? '#4a90e2' : '#555')}">${i}</span>
@@ -96,25 +113,39 @@
         }
     }
 
-    // 일정 추가하는 기능
+    // ➕ 일정 추가 기능
     window.addEvent = function(year, month, day) {
-        const eventText = prompt(`${month + 1}월 ${day}일에 추가할 일정을 입력하세요:\n(예: 수학 수행평가)`);
-        if (eventText) { // 내용을 입력하고 확인을 눌렀다면
+        const eventText = prompt(`${month + 1}월 ${day}일에 추가할 일정을 입력하세요:`);
+        if (eventText && eventText.trim() !== "") { 
             const dateKey = `${year}-${month}-${day}`;
-            if (!savedEvents[dateKey]) savedEvents[dateKey] = []; // 빈 칸이면 배열 만들기
-            savedEvents[dateKey].push(eventText); // 일정 추가
-            localStorage.setItem('myEvents', JSON.stringify(savedEvents)); // 기기에 저장!
-            renderCalendar(currentDate); // 달력 새로고침
+            if (!savedEvents[dateKey]) savedEvents[dateKey] = []; 
+            savedEvents[dateKey].push(eventText); 
+            localStorage.setItem('myEvents', JSON.stringify(savedEvents)); 
+            renderCalendar(currentDate); 
         }
     };
 
-    // 일정 삭제하는 기능
+    // ✏️ 일정 수정 기능 (새로 추가됨!)
+    window.editEvent = function(dateKey, index, e) {
+        e.stopPropagation(); // 버튼 눌렀을 때 배경(날짜칸)이 눌리는 것 방지
+        const currentText = savedEvents[dateKey][index]; // 기존 글자 가져오기
+        const newText = prompt("일정을 수정하세요:", currentText); // 수정할 창 띄우기
+        
+        if (newText !== null && newText.trim() !== "") {
+            savedEvents[dateKey][index] = newText; // 새 글자로 덮어쓰기
+            localStorage.setItem('myEvents', JSON.stringify(savedEvents)); // 저장
+            renderCalendar(currentDate); // 새로고침
+        }
+    };
+
+    // ❌ 일정 삭제 기능
     window.deleteEvent = function(dateKey, index, e) {
-        e.stopPropagation(); // 삭제 버튼을 눌렀을 때 일정 추가 창이 뜨는 것 방지
-        if (confirm(`이 일정을 삭제하시겠습니까?`)) {
-            savedEvents[dateKey].splice(index, 1); // 해당 일정 삭제
-            localStorage.setItem('myEvents', JSON.stringify(savedEvents)); // 기기에 다시 저장!
-            renderCalendar(currentDate); // 달력 새로고침
+        e.stopPropagation(); 
+        const eventText = savedEvents[dateKey][index];
+        if (confirm(`'${eventText}' 일정을 정말 삭제하시겠습니까?`)) {
+            savedEvents[dateKey].splice(index, 1); 
+            localStorage.setItem('myEvents', JSON.stringify(savedEvents)); 
+            renderCalendar(currentDate); 
         }
     };
 
