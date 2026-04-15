@@ -8,70 +8,130 @@
         :root { --bg-color: #f4f7f6; --card-bg: #ffffff; --primary-color: #4a90e2; --accent-color: #e74c3c; }
         body { font-family: 'Pretendard', sans-serif; background-color: var(--bg-color); display: flex; justify-content: center; padding: 20px; }
         .calendar-container { background: var(--card-bg); width: 100%; max-width: 500px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); padding: 20px; }
-        .calendar-header { text-align: center; margin-bottom: 20px; }
+        
+        /* 달력 상단 (버튼과 월 표시) */
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .calendar-header h1 { font-size: 1.5rem; color: #333; margin: 0; }
+        .calendar-header button { background: var(--bg-color); border: none; font-size: 1.2rem; cursor: pointer; color: var(--primary-color); padding: 5px 15px; border-radius: 8px; font-weight: bold; }
+        .calendar-header button:hover { background: #e0e5e3; }
         
         /* 달력 그리드 설정 */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
         .day-name { text-align: center; font-weight: bold; font-size: 0.8rem; color: #888; padding-bottom: 10px; }
-        .day { background: #fff; border: 1px solid #eee; min-height: 80px; padding: 5px; border-radius: 5px; position: relative; }
+        .day { background: #fff; border: 1px solid #eee; min-height: 80px; padding: 5px; border-radius: 5px; display: flex; flex-direction: column; }
+        .day.empty { background: transparent; border: none; } /* 빈 칸 스타일 */
         .day.today { background: #eef5ff; border: 2px solid var(--primary-color); }
         .day-number { font-size: 0.9rem; font-weight: bold; color: #555; }
 
         /* 수행평가 일정 스타일 */
-        .event { font-size: 0.7rem; padding: 2px 4px; border-radius: 3px; margin-top: 3px; color: white; line-height: 1.2; }
+        .event { font-size: 0.7rem; padding: 4px; border-radius: 4px; margin-top: 3px; color: white; line-height: 1.2; word-break: keep-all; }
         .event.blue { background-color: #4a90e2; }
         .event.red { background-color: #e74c3c; }
         .event.green { background-color: #2ecc71; }
 
         /* 주말 색상 */
-        .day-name:nth-child(1), .day:nth-child(7n+1) .day-number { color: #e74c3c; } /* 일요일 */
-        .day-name:nth-child(7), .day:nth-child(7n) .day-number { color: #4a90e2; } /* 토요일 */
+        .day-name:nth-child(1) { color: #e74c3c; } /* 일요일 */
+        .day-name:nth-child(7) { color: #4a90e2; } /* 토요일 */
     </style>
 </head>
 <body>
 
 <div class="calendar-container">
     <div class="calendar-header">
-        <h1>📅 2024년 4월 수행평가</h1>
+        <button id="prevBtn">◀</button>
+        <h1 id="monthYear">📅 년 월</h1>
+        <button id="nextBtn">▶</button>
     </div>
 
-    <div class="calendar-grid">
+    <div class="calendar-grid" id="calendarGrid">
         <div class="day-name">일</div><div class="day-name">월</div><div class="day-name">화</div>
         <div class="day-name">수</div><div class="day-name">목</div><div class="day-name">금</div><div class="day-name">토</div>
-
-        <div class="day"></div> 
-        
-        <div class="day"><span class="day-number">1</span></div>
-        <div class="day"><span class="day-number">2</span></div>
-        <div class="day"><span class="day-number">3</span></div>
-        <div class="day"><span class="day-number">4</span></div>
-        <div class="day"><span class="day-number">5</span>
-            <div class="event blue">국어 독후감</div>
-        </div>
-        <div class="day"><span class="day-number">6</span></div>
-        
-        <div class="day"><span class="day-number">7</span></div>
-        <div class="day"><span class="day-number">8</span></div>
-        <div class="day"><span class="day-number">9</span></div>
-        <div class="day"><span class="day-number">10</span></div>
-        <div class="day"><span class="day-number">11</span></div>
-        <div class="day"><span class="day-number">12</span>
-            <div class="event red">수학 단원평가</div>
-        </div>
-        <div class="day"><span class="day-number">13</span></div>
-
-        <div class="day"><span class="day-number">14</span></div>
-        <div class="day today"><span class="day-number">15</span>
-            <div class="event green">과학 실험보고서</div>
-        </div>
-        <div class="day"><span class="day-number">16</span></div>
-        <div class="day"><span class="day-number">17</span></div>
-        <div class="day"><span class="day-number">18</span></div>
-        <div class="day"><span class="day-number">19</span></div>
-        <div class="day"><span class="day-number">20</span></div>
         </div>
 </div>
+
+<script>
+    // 🧠 여기서부터 JavaScript (달력의 뇌) 역할입니다!
+    
+    // 화면에 있는 글자나 버튼을 조종하기 위해 가져옵니다.
+    const monthYearText = document.getElementById('monthYear');
+    const calendarGrid = document.getElementById('calendarGrid');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    let currentDate = new Date(); // 접속한 사람의 현재 날짜와 시간
+
+    // 달력을 그리는 함수 (핵심!)
+    function renderCalendar(date) {
+        const year = date.getFullYear(); // 연도
+        const month = date.getMonth();   // 월 (주의: 0부터 시작해서 0이 1월, 11이 12월입니다!)
+
+        // 상단에 몇 년 몇 월인지 글자 찍기
+        monthYearText.innerHTML = `📅 ${year}년 ${month + 1}월`;
+
+        // 요일 이름만 남기고 날짜 칸은 싹 지우기 (초기화)
+        const dayNamesHtml = `
+            <div class="day-name">일</div><div class="day-name">월</div><div class="day-name">화</div>
+            <div class="day-name">수</div><div class="day-name">목</div><div class="day-name">금</div><div class="day-name">토</div>
+        `;
+        calendarGrid.innerHTML = dayNamesHtml;
+
+        // 이번 달 1일이 무슨 요일인지 알아내기 (빈 칸을 뚫기 위해)
+        const firstDay = new Date(year, month, 1).getDay(); 
+        
+        // 이번 달이 며칠까지 있는지 알아내기 (28일? 30일? 31일?)
+        const lastDate = new Date(year, month + 1, 0).getDate(); 
+
+        // 1. 1일 시작 전까지 빈 칸 그리기
+        for (let i = 0; i < firstDay; i++) {
+            calendarGrid.innerHTML += `<div class="day empty"></div>`;
+        }
+
+        // 2. 1일부터 마지막 날짜까지 숫자 채우기
+        const today = new Date();
+        for (let i = 1; i <= lastDate; i++) {
+            // 오늘 날짜인지 확인해서 색깔 칠할 준비
+            let isToday = '';
+            if (year === today.getFullYear() && month === today.getMonth() && i === today.getDate()) {
+                isToday = 'today';
+            }
+            
+            // ⭐️ 일정을 적는 곳! (예시로 몇 개 넣어두었습니다)
+            let eventHtml = '';
+            if (month === 3 && i === 15) { // 4월 15일 (month는 0부터 시작하므로 4월은 3입니다!)
+                eventHtml = `<div class="event green">과학 보고서</div>`;
+            }
+            if (month === 3 && i === 25) { 
+                eventHtml = `<div class="event red">수학 중간고사</div>`;
+            }
+            if (month === 4 && i === 10) { // 5월 10일
+                eventHtml = `<div class="event blue">국어 독후감</div>`;
+            }
+
+            // 날짜 칸을 HTML에 추가
+            calendarGrid.innerHTML += `
+                <div class="day ${isToday}">
+                    <span class="day-number" style="color: ${new Date(year, month, i).getDay() === 0 ? '#e74c3c' : (new Date(year, month, i).getDay() === 6 ? '#4a90e2' : '#555')}">${i}</span>
+                    ${eventHtml}
+                </div>
+            `;
+        }
+    }
+
+    // 웹사이트에 들어오자마자 달력 한 번 그리기
+    renderCalendar(currentDate);
+
+    // ◀ 버튼 누르면 이전 달력 보여주기
+    prevBtn.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        renderCalendar(currentDate);
+    });
+
+    // ▶ 버튼 누르면 다음 달력 보여주기
+    nextBtn.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        renderCalendar(currentDate);
+    });
+</script>
 
 </body>
 </html>
