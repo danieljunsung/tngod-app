@@ -3,13 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>수행평가 달력 PRO</title>
+    <title>반별 수행평가 달력</title>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
         :root { --bg-color: #f4f7f6; --card-bg: #ffffff; --primary-color: #4a90e2; --accent-color: #e74c3c; --success-color: #2ecc71; }
         body { font-family: 'Pretendard', sans-serif; background-color: var(--bg-color); display: flex; justify-content: center; padding: 30px 20px; margin: 0; }
         
         .app-wrapper { width: 100%; max-width: 800px; display: flex; flex-direction: column; gap: 20px; }
         .calendar-container, .action-panel { background: var(--card-bg); border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); padding: 30px; }
+        
+        /* ✨ 반 선택 셀렉트 박스 스타일 ✨ */
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px dashed #eee; }
+        .class-selector { font-size: 1.2rem; font-weight: bold; padding: 8px 15px; border-radius: 8px; border: 2px solid var(--primary-color); outline: none; color: #333; cursor: pointer; }
         
         .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
         .calendar-header h1 { font-size: 1.8rem; color: #333; margin: 0; }
@@ -23,10 +29,9 @@
         .day.today { background: #eef5ff; border: 2px solid var(--primary-color); }
         .day-number { font-size: 1.1rem; font-weight: bold; color: #555; pointer-events: none; margin-bottom: 8px; }
 
-        .event { background-color: #4a90e2; color: white; border-radius: 6px; padding: 6px; margin-bottom: 4px; font-size: 0.85rem; font-weight: bold; word-break: keep-all; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .event { background-color: var(--primary-color); color: white; border-radius: 6px; padding: 6px; margin-bottom: 4px; font-size: 0.85rem; font-weight: bold; word-break: keep-all; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .event.selected { outline: 3px solid #333; transform: scale(1.02); background-color: #2c3e50; }
 
-        /* 하단 액션 패널 */
         .action-panel { display: none; text-align: center; animation: slideUp 0.3s ease-out; border: 2px solid var(--primary-color); }
         .action-panel h3 { margin: 0 0 15px 0; color: #333; font-size: 1.2rem; }
         .action-buttons { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
@@ -37,15 +42,14 @@
         .btn-delete { background-color: var(--accent-color); }
         .btn-close { background-color: #95a5a6; }
 
-        /* 팝업창(모달) 스타일 */
+        /* 모달 스타일 */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
-        .rubric-modal { background: white; width: 100%; max-width: 600px; border-radius: 15px; padding: 25px; position: relative; max-height: 90vh; overflow-y: auto; text-align: center; }
+        .rubric-modal { background: white; width: 100%; max-width: 600px; border-radius: 15px; padding: 25px; max-height: 90vh; overflow-y: auto; text-align: center; }
         .rubric-content { margin: 20px 0; border: 2px dashed #ddd; border-radius: 10px; min-height: 250px; display: flex; justify-content: center; align-items: center; background: #fafafa; }
         .rubric-content img { max-width: 100%; height: auto; border-radius: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        
         .modal-footer { display: flex; justify-content: center; gap: 15px; margin-top: 20px; }
         #fileInput { display: none; }
-        .btn-upload { background: var(--primary-color); color: white; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; display: inline-block; }
+        .btn-upload { background: var(--primary-color); color: white; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
 
         @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .day-name:nth-child(1) { color: #e74c3c; } .day-name:nth-child(7) { color: #4a90e2; } 
@@ -55,6 +59,13 @@
 
 <div class="app-wrapper">
     <div class="calendar-container">
+        
+        <div class="top-bar">
+            <select id="classSelect" class="class-selector" onchange="changeClass()">
+                </select>
+            <span style="color: #666; font-size: 0.9rem;">실시간 연동 중 🟢</span>
+        </div>
+
         <div class="calendar-header">
             <button onclick="changeMonth(-1)">◀</button>
             <h1 id="monthYear">📅 년 월</h1>
@@ -89,9 +100,61 @@
 </div>
 
 <script>
+    // ⚠️ [중요] 여기에 본인의 파이어베이스 설정값을 꼭 붙여넣으세요!
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT.firebaseapp.com",
+        databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+        projectId: "YOUR_PROJECT",
+        storageBucket: "YOUR_PROJECT.appspot.com",
+        messagingSenderId: "ID",
+        appId: "APP_ID"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
     let currentDate = new Date();
-    let savedEvents = JSON.parse(localStorage.getItem('myEvents')) || {};
+    let remoteEvents = {};
     let selectedDateKey = null, selectedIndex = null;
+    
+    // ✨ 현재 선택된 반 (기본값: 1반)
+    let currentClass = "1"; 
+    // 파이어베이스 실시간 감시자(Listener)를 저장할 변수
+    let dbListener = null; 
+
+    // 1반부터 14반까지 선택 메뉴 만들기
+    const classSelect = document.getElementById('classSelect');
+    for (let i = 1; i <= 14; i++) {
+        classSelect.innerHTML += `<option value="${i}">${i}반 수행평가 달력</option>`;
+    }
+
+    // ✨ 반이 바뀔 때마다 실행되는 함수
+    window.changeClass = () => {
+        closePanel(); // 열려있던 하단 메뉴 닫기
+        currentClass = classSelect.value; // 선택한 반 번호 가져오기
+        listenToEvents(); // 해당 반의 데이터베이스 연결하기
+    };
+
+    // ✨ 데이터베이스에서 선택한 반의 데이터를 실시간으로 가져오는 함수
+    function listenToEvents() {
+        // 이전에 다른 반 데이터를 보고 있었다면 연결을 끊음
+        if (dbListener) db.ref(dbListener).off(); 
+        
+        // 새로운 반의 데이터베이스 경로 설정 (예: classes/class_3/events)
+        dbListener = `classes/class_${currentClass}/events`;
+        
+        // 해당 경로의 데이터가 바뀔 때마다 화면을 새로고침
+        db.ref(dbListener).on("value", (snapshot) => {
+            remoteEvents = snapshot.val() || {};
+            render();
+        });
+    }
+
+    // ✨ 구름 창고에 데이터를 저장할 때도 '현재 선택된 반' 폴더에 저장
+    function syncToCloud() {
+        db.ref(`classes/class_${currentClass}/events`).set(remoteEvents);
+    }
 
     function render() {
         const year = currentDate.getFullYear(), month = currentDate.getMonth();
@@ -102,71 +165,78 @@
         const first = new Date(year, month, 1).getDay();
         const last = new Date(year, month + 1, 0).getDate();
 
-        for (let i = 0; i < first; i++) grid.innerHTML += `<div class="day empty"></div>`;
+        for (let i = 0; i < first; i++) grid.innerHTML += `<div class="day" style="border:none; background:transparent;"></div>`;
         for (let i = 1; i <= last; i++) {
             const key = `${year}-${month}-${i}`;
             const isToday = (new Date().toDateString() === new Date(year, month, i).toDateString()) ? 'today' : '';
-            let events = (savedEvents[key] || []).map((ev, idx) => 
-                `<div class="event" id="ev-${key}-${idx}" onclick="selectEv('${key}', ${idx}, '${ev.text || ev}', event)">${ev.text || ev}</div>`
+            const events = (remoteEvents[key] || []).map((ev, idx) => 
+                `<div class="event" id="ev-${key}-${idx}" onclick="selectEv('${key}', ${idx}, '${ev.text}', event)">${ev.text}</div>`
             ).join('');
             grid.innerHTML += `<div class="day ${isToday}" onclick="addEv(${year}, ${month}, ${i})"><span class="day-number">${i}</span>${events}</div>`;
         }
     }
+
+    window.addEv = (y, m, d) => {
+        const txt = prompt(`${m + 1}월 ${d}일 수행평가를 입력하세요:`);
+        if (txt) {
+            const key = `${y}-${m}-${d}`;
+            if (!remoteEvents[key]) remoteEvents[key] = [];
+            remoteEvents[key].push({ text: txt, rubric: null });
+            syncToCloud();
+        }
+    };
 
     window.selectEv = (key, idx, txt, e) => {
         e.stopPropagation();
         selectedDateKey = key; selectedIndex = idx;
         document.querySelectorAll('.event').forEach(el => el.classList.remove('selected'));
         document.getElementById(`ev-${key}-${idx}`).classList.add('selected');
-        document.getElementById('selectedEventTitle').innerText = txt;
+        document.getElementById('selectedEventTitle').innerText = `[${currentClass}반] ${txt}`;
         document.getElementById('actionPanel').style.display = 'block';
     };
 
-    window.addEv = (y, m, d) => {
-        const txt = prompt('새 일정을 입력하세요:');
-        if (txt) {
-            const key = `${y}-${m}-${d}`;
-            if (!savedEvents[key]) savedEvents[key] = [];
-            savedEvents[key].push({ text: txt, rubric: null });
-            saveAndRender();
-        }
-    };
-
     window.openRubricModal = () => {
-        const ev = savedEvents[selectedDateKey][selectedIndex];
-        document.getElementById('modalTitle').innerText = `📄 ${ev.text || ev} 기준표`;
-        document.getElementById('rubricContent').innerHTML = ev.rubric ? `<img src="${ev.rubric}">` : `<p>등록된 사진이 없습니다.</p>`;
+        const ev = remoteEvents[selectedDateKey][selectedIndex];
+        document.getElementById('modalTitle').innerText = `📄 ${ev.text} 기준표`;
+        document.getElementById('rubricContent').innerHTML = ev.rubric ? `<img src="${ev.rubric}">` : `<p style="color:#888">등록된 사진이 없습니다.</p>`;
         document.getElementById('modalOverlay').style.display = 'flex';
     };
 
     window.uploadPhoto = (e) => {
         const reader = new FileReader();
         reader.onload = (ev) => {
-            if (typeof savedEvents[selectedDateKey][selectedIndex] !== 'object') {
-                savedEvents[selectedDateKey][selectedIndex] = { text: savedEvents[selectedDateKey][selectedIndex] };
-            }
-            savedEvents[selectedDateKey][selectedIndex].rubric = ev.target.result;
-            try { saveAndRender(); openRubricModal(); } catch { alert('사진이 너무 큽니다!'); }
+            remoteEvents[selectedDateKey][selectedIndex].rubric = ev.target.result;
+            try { syncToCloud(); openRubricModal(); alert("사진 저장 성공!"); } 
+            catch { alert('사진이 너무 큽니다! 용량을 줄여주세요.'); }
         };
-        reader.readAsDataURL(e.target.files[0]);
+        if(e.target.files[0]) reader.readAsDataURL(e.target.files[0]);
     };
 
     window.editEvent = () => {
-        const ev = savedEvents[selectedDateKey][selectedIndex];
-        const newTxt = prompt('수정할 내용을 입력하세요:', ev.text || ev);
+        const ev = remoteEvents[selectedDateKey][selectedIndex];
+        const newTxt = prompt('수정할 내용을 입력하세요:', ev.text);
         if (newTxt) {
-            if (typeof ev === 'object') ev.text = newTxt; else savedEvents[selectedDateKey][selectedIndex] = newTxt;
-            saveAndRender();
+            remoteEvents[selectedDateKey][selectedIndex].text = newTxt;
+            syncToCloud();
+            document.getElementById('selectedEventTitle').innerText = `[${currentClass}반] ${newTxt}`;
         }
     };
 
-    window.deleteEvent = () => { if(confirm('삭제할까요?')) { savedEvents[selectedDateKey].splice(selectedIndex, 1); closePanel(); saveAndRender(); } };
+    window.deleteEvent = () => {
+        if(confirm('정말 삭제할까요?')) {
+            remoteEvents[selectedDateKey].splice(selectedIndex, 1);
+            syncToCloud();
+            closePanel();
+        }
+    };
+
     window.closePanel = () => { document.getElementById('actionPanel').style.display = 'none'; document.querySelectorAll('.event').forEach(el => el.classList.remove('selected')); };
     window.closeRubricModal = () => document.getElementById('modalOverlay').style.display = 'none';
     window.changeMonth = (v) => { currentDate.setMonth(currentDate.getMonth() + v); closePanel(); render(); };
-    function saveAndRender() { localStorage.setItem('myEvents', JSON.stringify(savedEvents)); render(); }
 
-    render();
+    // 처음 시작할 때 1반 데이터 불러오기
+    listenToEvents();
+
 </script>
 </body>
 </html>
