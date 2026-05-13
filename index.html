@@ -7,15 +7,19 @@
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <style>
-        :root { --bg-color: #f4f7f6; --card-bg: #ffffff; --primary-color: #4a90e2; --accent-color: #e74c3c; --success-color: #2ecc71; }
+        :root { --bg-color: #f4f7f6; --card-bg: #ffffff; --primary-color: #4a90e2; --accent-color: #e74c3c; --success-color: #2ecc71; --warning-color: #f39c12; }
         body { font-family: 'Pretendard', sans-serif; background-color: var(--bg-color); display: flex; justify-content: center; padding: 30px 20px; margin: 0; }
         
         .app-wrapper { width: 100%; max-width: 800px; display: flex; flex-direction: column; gap: 20px; }
         .calendar-container, .action-panel { background: var(--card-bg); border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.08); padding: 30px; }
         
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px dashed #eee; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px dashed #eee; gap: 10px; }
         .class-selector { font-size: 1.1rem; font-weight: bold; padding: 8px 12px; border-radius: 8px; border: 2px solid var(--primary-color); color: #333; cursor: pointer; }
         
+        /* ✨ 초기화 버튼 스타일 */
+        .btn-reset { background: none; border: 1px solid #ccc; color: #999; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; transition: 0.3s; }
+        .btn-reset:hover { background: #fee; border-color: var(--accent-color); color: var(--accent-color); }
+
         .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
         .calendar-header h1 { font-size: 1.6rem; color: #333; margin: 0; }
         .calendar-header button { background: var(--bg-color); border: none; font-size: 1.2rem; cursor: pointer; color: var(--primary-color); padding: 5px 15px; border-radius: 8px; }
@@ -33,7 +37,6 @@
         .action-buttons { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
         .action-buttons button { padding: 10px 15px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: white; }
         
-        /* 팝업창(모달) */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
         .rubric-modal { background: white; width: 90%; max-width: 500px; border-radius: 12px; padding: 20px; text-align: center; }
         .rubric-content { margin: 15px 0; border: 1px solid #ddd; min-height: 200px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
@@ -49,7 +52,10 @@
     <div class="calendar-container">
         <div class="top-bar">
             <select id="classSelect" class="class-selector" onchange="changeClass()"></select>
-            <span id="syncStatus" style="color: var(--success-color); font-size: 0.8rem;">연결됨 ●</span>
+            <div style="display:flex; align-items:center; gap:15px;">
+                <span id="syncStatus" style="color: var(--success-color); font-size: 0.8rem;">연결됨 ●</span>
+                <button class="btn-reset" onclick="resetAllData()">전체 초기화</button>
+            </div>
         </div>
 
         <div class="calendar-header">
@@ -84,7 +90,6 @@
 </div>
 
 <script>
-    // ✅ 사용자가 제공한 Firebase 설정값 적용 완료!
     const firebaseConfig = {
         apiKey: "AIzaSyCHIC8vWvhsNSQdwxRPh56WTMGC89JuOXk",
         authDomain: "tngod-app.firebaseapp.com",
@@ -105,7 +110,6 @@
     let currentClass = "1"; 
     let dbListener = null;
 
-    // 반 선택 메뉴 자동 생성 (1~14반)
     const classSelect = document.getElementById('classSelect');
     for (let i = 1; i <= 14; i++) {
         classSelect.innerHTML += `<option value="${i}">${i}반 수행평가 달력</option>`;
@@ -129,6 +133,28 @@
             document.getElementById('syncStatus').style.color = "var(--success-color)";
         });
     }
+
+    // ✨ 데이터 초기화 함수 (2중 확인 단계)
+    window.resetAllData = () => {
+        // 1차 확인
+        const firstCheck = confirm(`⚠️ 경고: [${currentClass}반]의 모든 일정이 삭제됩니다. 계속하시겠습니까?`);
+        
+        if (firstCheck) {
+            // 2차 확인 (더 강력하게 경고)
+            const secondCheck = confirm(`정말로 삭제하시겠습니까? 삭제된 데이터는 복구할 수 없습니다.`);
+            
+            if (secondCheck) {
+                // 파이어베이스에서 해당 반의 이벤트를 빈 값으로 덮어씀
+                db.ref(`classes/class_${currentClass}/events`).set(null)
+                .then(() => {
+                    alert(`${currentClass}반 달력이 성공적으로 초기화되었습니다.`);
+                })
+                .catch((error) => {
+                    alert("초기화 중 오류가 발생했습니다: " + error.message);
+                });
+            }
+        }
+    };
 
     function syncToCloud() {
         db.ref(`classes/class_${currentClass}/events`).set(remoteEvents);
@@ -210,7 +236,7 @@
     window.closeRubricModal = () => document.getElementById('modalOverlay').style.display = 'none';
     window.changeMonth = (v) => { currentDate.setMonth(currentDate.getMonth() + v); render(); };
 
-    listenToEvents(); // 실행 시작
+    listenToEvents();
 </script>
 </body>
 </html>
