@@ -56,17 +56,18 @@
         .day {
             background: #fff; border: 1px solid var(--border); min-height: 110px;
             padding: 8px; border-radius: 12px; cursor: pointer; transition: 0.2s;
+            display: flex; flex-direction: column; gap: 4px;
         }
         .day:hover { border-color: var(--accent); background: #fdfdfd; }
         .day.today { border: 2px solid var(--accent); background: #eff6ff; }
-        .day-number { font-weight: 700; font-size: 0.9rem; margin-bottom: 8px; display: block; }
+        .day-number { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; display: block; }
 
         .event-item {
             background: var(--accent); color: white; border-radius: 6px;
-            padding: 4px 8px; margin-bottom: 4px; font-size: 0.75rem; font-weight: 600;
+            padding: 4px 8px; font-size: 0.75rem; font-weight: 600;
             overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        .event-item.selected { background: var(--primary); ring: 2px solid var(--accent); }
+        .event-item.selected { background: var(--primary); outline: 2px solid var(--accent); }
 
         /* 오른쪽 상세 정보창 (Side Panel) */
         .info-section { position: sticky; top: 40px; height: fit-content; display: flex; flex-direction: column; gap: 20px; }
@@ -96,6 +97,13 @@
         .btn-delete { background: #fee2e2; color: #ef4444; }
         .btn-upload { background: #f1f5f9; color: var(--text); border: 1px solid var(--border); text-align: center; }
 
+        /* 하단 유틸리티 버튼 스타일 */
+        .btn-reset {
+            background: none; border: 1px solid #fee2e2; color: #ef4444; padding: 6px 12px;
+            border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: 0.2s;
+        }
+        .btn-reset:hover { background: #fee2e2; }
+
         #fileInput { display: none; }
 
         @media (max-width: 1000px) {
@@ -124,7 +132,9 @@
             <div style="font-weight:700; color:var(--accent);" id="classTitle">1학년 3반</div>
         </div>
         <div class="calendar-grid" id="calendarGrid"></div>
-        <div style="margin-top:20px; text-align: right;">
+        
+        <div style="margin-top:20px; display: flex; justify-content: space-between; align-items: center;">
+            <button class="btn-reset" onclick="resetAllData()">⚠️ 반 전체 초기화</button>
             <button onclick="location.reload()" style="background:none; border:none; color:#94a3b8; cursor:pointer; font-size:0.8rem;">🔄 로그아웃</button>
         </div>
     </div>
@@ -224,7 +234,6 @@
 
         for (let i = 0; i < first; i++) grid.innerHTML += `<div class="day" style="border:none"></div>`;
         for (let i = 1; i <= last; i++) {
-            // 🌟 0인덱스 보정: month에 +1을 더해 직관적인 '년-월-일' 형태로 키 생성
             const key = `${year}-${month + 1}-${i}`;
             const isToday = (new Date().toDateString() === new Date(year, month, i).toDateString()) ? 'today' : '';
             const events = (remoteEvents[key] || []).map((ev, idx) => 
@@ -234,11 +243,8 @@
         }
     }
 
+    // 🌟 수정: 이미 일정이 있어도 무조건 새로 추가할 수 있도록 제한 해제
     window.clickDay = (key) => {
-        if (remoteEvents[key] && remoteEvents[key].length > 0) {
-            selectEvent(key, 0);
-            return;
-        }
         const txt = prompt('새로운 수행평가 항목을 입력하세요:');
         if (txt) {
             if (!remoteEvents[key]) remoteEvents[key] = [];
@@ -249,20 +255,26 @@
     };
 
     window.selectEvent = (key, idx, e) => {
-        if(e) e.stopPropagation();
+        if(e) e.stopPropagation(); // 달력 칸 클릭(추가 이벤트)으로 전파되는 것 방지
         selectedDateKey = key;
         selectedIndex = idx;
         updateSidePanel();
     };
 
     function updateSidePanel() {
+        // 간혹 삭제 작업 등으로 데이터가 없는 상태 체크
+        if (!remoteEvents[selectedDateKey] || !remoteEvents[selectedDateKey][selectedIndex]) {
+            document.getElementById('infoContent').style.display = 'none';
+            document.getElementById('placeholder').style.display = 'block';
+            return;
+        }
+
         const ev = remoteEvents[selectedDateKey][selectedIndex];
         document.getElementById('placeholder').style.display = 'none';
         document.getElementById('infoContent').style.display = 'block';
         
         document.getElementById('viewTitle').innerText = ev.text;
         
-        // 🌟 날짜 표시를 깔끔한 한국어 형식(년 월 일)으로 가공하여 출력
         const dateParts = selectedDateKey.split('-');
         document.getElementById('viewDate').innerText = `${dateParts[0]}년 ${dateParts[1]}월 ${dateParts[2]}일`;
         
@@ -306,9 +318,25 @@
             remoteEvents[selectedDateKey].splice(selectedIndex, 1);
             if(remoteEvents[selectedDateKey].length === 0) delete remoteEvents[selectedDateKey];
             db.ref(`grade_${currentGrade}/class_${currentClass}/events`).set(remoteEvents);
+            selectedDateKey = null;
+            selectedIndex = null;
             document.getElementById('infoContent').style.display = 'none';
             document.getElementById('placeholder').style.display = 'block';
-            selectedDateKey = null;
+        }
+    };
+
+    // 🌟 추가: 해당 반의 전체 데이터를 완전히 지워주는 초기화 함수
+    window.resetAllData = () => {
+        if (confirm(`⚠️ 경고: [${currentGrade}학년 ${currentClass}반]의 모든 일정이 영구 삭제됩니다. 계속하시겠습니까?`)) {
+            if (confirm(`정말로 삭제하시겠습니까? 삭제된 데이터는 절대로 복구할 수 없습니다.`)) {
+                db.ref(`grade_${currentGrade}/class_${currentClass}/events`).set(null).then(() => {
+                    alert(`${currentGrade}학년 ${currentClass}반 달력이 완전히 초기화되었습니다.`);
+                    selectedDateKey = null;
+                    selectedIndex = null;
+                    document.getElementById('infoContent').style.display = 'none';
+                    document.getElementById('placeholder').style.display = 'block';
+                });
+            }
         }
     };
 
