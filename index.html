@@ -18,7 +18,7 @@
             color: var(--text); margin: 0; display: flex; justify-content: center; min-height: 100vh;
         }
 
-        /* 🌟 로그인 화면 비율 조정 (황금비율 적용 및 컴팩트화) */
+        /* 로그인 화면 */
         .login-container {
             width: 100%; max-width: 420px; background: var(--card); padding: 45px 35px;
             border-radius: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05), 0 10px 10px -5px rgba(0,0,0,0.04);
@@ -36,7 +36,7 @@
         }
         .login-btn:hover { background: #2563eb; }
 
-        /* 🌟 메인 대시보드 레이아웃 비율 조정 (달력 1.5 : 상세창 1.5 수준으로 우측 공간 대폭 확대) */
+        /* 메인 대시보드 레이아웃 */
         .app-wrapper {
             display: none; width: 100%; max-width: 1400px; padding: 40px 20px;
             gap: 30px; grid-template-columns: 1.4fr 1.6fr; box-sizing: border-box;
@@ -55,33 +55,39 @@
         .nav-btn { background: #f1f5f9; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: bold; }
         .nav-btn:hover { background: #e2e8f0; }
 
-        /* 달력 그리드 */
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+        /* 🌟 달력 그리드 (minmax 구조로 변경하여 텍스트가 길어져도 절대 칸이 안 늘어나게 고정) */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
         .day-name { text-align: center; font-weight: 600; font-size: 0.85rem; color: #94a3b8; padding-bottom: 8px; }
         .day {
             background: #fff; border: 1px solid var(--border); min-height: 100px;
             padding: 8px; border-radius: 12px; cursor: pointer; transition: 0.2s;
             display: flex; flex-direction: column; gap: 4px; box-sizing: border-box;
+            overflow: hidden;
         }
         .day:hover { border-color: var(--accent); background: #f8fafc; }
         .day.today { border: 2px solid var(--accent); background: #eff6ff; }
         .day-number { font-weight: 700; font-size: 0.9rem; margin-bottom: 2px; display: block; }
 
+        /* 🌟 일정 아이템 (칸을 넘어가면 ... 처리해주는 핵심 CSS 배치) */
         .event-item {
             background: var(--accent); color: white; border-radius: 6px;
             padding: 4px 8px; font-size: 0.75rem; font-weight: 600;
-            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            white-space: nowrap;        /* 줄바꿈 금지 */
+            overflow: hidden;           /* 넘치는 부분 숨김 */
+            text-overflow: ellipsis;    /* 넘치면 ... 표시 */
+            width: 100%;                /* 부모 크기에 맞춤 */
+            box-sizing: border-box;     /* 패딩 포함 크기 계산 */
+            display: block;
         }
         .event-item.selected { background: var(--primary); outline: 2px solid var(--accent); }
 
-        /* 🌟 우측 상세 정보창 비율 및 크기 확장 */
+        /* 우측 상세 정보창 (Side Panel) */
         .info-section { position: sticky; top: 40px; height: fit-content; display: flex; flex-direction: column; gap: 18px; }
         .info-placeholder { color: #94a3b8; text-align: center; padding: 150px 0; font-size: 1.05rem; line-height: 1.6; }
         
         .info-header { border-bottom: 2px solid var(--bg); padding-bottom: 15px; margin-bottom: 5px; }
         .info-header h2 { margin: 0; font-size: 1.5rem; color: var(--primary); word-break: break-all; }
         
-        /* 텍스트 입력창 크기 대폭 확장 */
         .memo-area {
             width: 100%; height: 240px; border: 1px solid var(--border); border-radius: 14px;
             padding: 18px; font-family: inherit; font-size: 1rem; line-height: 1.6; resize: vertical;
@@ -89,7 +95,7 @@
         }
         .memo-area:focus { background: #fff; border-color: var(--accent); outline: none; }
 
-        /* 🌟 다중 이미지 갤러리 그리드 레이아웃 */
+        /* 다중 이미지 갤러리 */
         .image-gallery-container {
             border: 1px dashed var(--border); border-radius: 14px; padding: 15px;
             background: #f8fafc; min-height: 120px; box-sizing: border-box;
@@ -103,7 +109,6 @@
         }
         .image-wrapper img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
         
-        /* 이미지 개별 삭제 버튼 */
         .img-delete-btn {
             position: absolute; top: 4px; right: 4px; background: rgba(239, 68, 68, 0.9);
             color: white; border: none; border-radius: 5px; width: 22px; height: 22px;
@@ -179,8 +184,7 @@
 
             <label style="font-size:0.85rem; font-weight:700; color:var(--primary); display:block; margin-bottom:4px;">🖼️ 관련 이미지 / 평가지표 (여러 장 가능)</label>
             <div class="image-gallery-container">
-                <div class="image-grid" id="imageGrid">
-                    </div>
+                <div class="image-grid" id="imageGrid"></div>
             </div>
 
             <div class="btn-group">
@@ -301,13 +305,12 @@
         document.getElementById('viewDate').innerText = `${dateParts[0]}년 ${dateParts[1]}월 ${dateParts[2]}일`;
         document.getElementById('memoInput').value = ev.rubricText || "";
         
-        // 🌟 다중 이미지 하이브리드 바인딩 (기존 rubric 단일 데이터 호환 포함)
         const grid = document.getElementById('imageGrid');
         grid.innerHTML = '';
         
         let imgList = ev.images || [];
         if (ev.rubric && imgList.length === 0) {
-            imgList = [ev.rubric]; // 예전 데이터 싱크 맞춤
+            imgList = [ev.rubric];
         }
 
         if (imgList.length === 0) {
@@ -343,7 +346,6 @@
         }
     };
 
-    // 🌟 다중 이미지 업로드 시스템
     window.uploadPhotos = (e) => {
         const files = Array.from(e.target.files);
         if (files.length === 0) return;
@@ -352,7 +354,6 @@
             remoteEvents[selectedDateKey][selectedIndex].images = [];
         }
 
-        // 기존에 혹시 rubric 필드에 구버전 데이터가 남아있었다면 배열로 이관
         if (remoteEvents[selectedDateKey][selectedIndex].rubric) {
             remoteEvents[selectedDateKey][selectedIndex].images.push(remoteEvents[selectedDateKey][selectedIndex].rubric);
             remoteEvents[selectedDateKey][selectedIndex].rubric = null; 
@@ -373,16 +374,13 @@
         });
     };
 
-    // 🌟 특정 이미지 한 장만 삭제하는 기능
     window.deleteSinglePhoto = (imgIdx, e) => {
         e.stopPropagation();
         if (confirm("이 사진을 삭제하시겠습니까?")) {
-            // 구버전 예외 처리 후 정식 배열 정제
             if (remoteEvents[selectedDateKey][selectedIndex].rubric) {
                 remoteEvents[selectedDateKey][selectedIndex].images = [remoteEvents[selectedDateKey][selectedIndex].rubric];
                 remoteEvents[selectedDateKey][selectedIndex].rubric = null;
             }
-            
             remoteEvents[selectedDateKey][selectedIndex].images.splice(imgIdx, 1);
             db.ref(`grade_${currentGrade}/class_${currentClass}/events`).set(remoteEvents);
             updateSidePanel();
