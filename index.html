@@ -18,7 +18,7 @@
             color: var(--text); margin: 0; display: flex; justify-content: center; min-height: 100vh;
         }
 
-        /* 🌟 로그인 화면 */
+        /* 로그인 화면 */
         .login-container {
             width: 100%; max-width: 400px; background: var(--card); padding: 50px 40px;
             border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
@@ -33,7 +33,7 @@
             border: none; border-radius: 12px; font-size: 1.1rem; font-weight: bold; cursor: pointer;
         }
 
-        /* 🌟 메인 대시보드 레이아웃 */
+        /* 메인 대시보드 레이아웃 */
         .app-wrapper {
             display: none; width: 100%; max-width: 1300px; padding: 40px 20px;
             gap: 30px; grid-template-columns: 1.8fr 1fr;
@@ -68,7 +68,7 @@
         }
         .event-item.selected { background: var(--primary); ring: 2px solid var(--accent); }
 
-        /* 🌟 오른쪽 상세 정보창 (Side Panel) */
+        /* 오른쪽 상세 정보창 (Side Panel) */
         .info-section { position: sticky; top: 40px; height: fit-content; display: flex; flex-direction: column; gap: 20px; }
         .info-placeholder { color: #94a3b8; text-align: center; padding: 100px 0; }
         
@@ -137,7 +137,7 @@
         <div id="infoContent" style="display:none;">
             <div class="info-header">
                 <h2 id="viewTitle">수행평가 제목</h2>
-                <p id="viewDate" style="color:#64748b; font-size:0.85rem; margin-top:5px;">2024-06-12</p>
+                <p id="viewDate" style="color:#64748b; font-size:0.9rem; font-weight: bold; margin-top:5px;">2024년 6월 12일</p>
             </div>
 
             <label style="font-size:0.85rem; font-weight:700; color:var(--primary);">상세 메모 및 기준</label>
@@ -162,7 +162,6 @@
 </div>
 
 <script>
-    // 🌟 Firebase 설정 (선생님 정보를 그대로 유지합니다)
     const firebaseConfig = {
         apiKey: "AIzaSyCHIC8vWvhsNSQdwxRPh56WTMGC89JuOXk",
         authDomain: "tngod-app.firebaseapp.com",
@@ -182,7 +181,6 @@
     let currentGrade = null, currentClass = null;
     let dbListener = null;
 
-    // 학번 체크 및 학년/반 자동 분석
     window.checkStudentID = () => {
         const inputId = document.getElementById('studentIdInput').value.trim();
         if (inputId === "admin") {
@@ -211,7 +209,7 @@
         db.ref(dbListener).on("value", (snapshot) => {
             remoteEvents = snapshot.val() || {};
             renderCalendar();
-            if(selectedDateKey) updateSidePanel(); // 데이터 갱신 시 사이드바도 업데이트
+            if(selectedDateKey) updateSidePanel();
         });
     }
 
@@ -226,7 +224,8 @@
 
         for (let i = 0; i < first; i++) grid.innerHTML += `<div class="day" style="border:none"></div>`;
         for (let i = 1; i <= last; i++) {
-            const key = `${year}-${month}-${i}`;
+            // 🌟 0인덱스 보정: month에 +1을 더해 직관적인 '년-월-일' 형태로 키 생성
+            const key = `${year}-${month + 1}-${i}`;
             const isToday = (new Date().toDateString() === new Date(year, month, i).toDateString()) ? 'today' : '';
             const events = (remoteEvents[key] || []).map((ev, idx) => 
                 `<div class="event-item" id="ev-${key}-${idx}" onclick="selectEvent('${key}', ${idx}, event)">${ev.text}</div>`
@@ -235,10 +234,9 @@
         }
     }
 
-    // 날짜 빈 칸 클릭 시 새 일정 추가
     window.clickDay = (key) => {
         if (remoteEvents[key] && remoteEvents[key].length > 0) {
-            selectEvent(key, 0); // 이미 일정이 있으면 첫 번째 선택
+            selectEvent(key, 0);
             return;
         }
         const txt = prompt('새로운 수행평가 항목을 입력하세요:');
@@ -250,7 +248,6 @@
         }
     };
 
-    // 일정 선택 시 사이드바 업데이트
     window.selectEvent = (key, idx, e) => {
         if(e) e.stopPropagation();
         selectedDateKey = key;
@@ -264,19 +261,21 @@
         document.getElementById('infoContent').style.display = 'block';
         
         document.getElementById('viewTitle').innerText = ev.text;
-        document.getElementById('viewDate').innerText = selectedDateKey;
+        
+        // 🌟 날짜 표시를 깔끔한 한국어 형식(년 월 일)으로 가공하여 출력
+        const dateParts = selectedDateKey.split('-');
+        document.getElementById('viewDate').innerText = `${dateParts[0]}년 ${dateParts[1]}월 ${dateParts[2]}일`;
+        
         document.getElementById('memoInput').value = ev.rubricText || "";
         
         const preview = document.getElementById('imagePreview');
         preview.innerHTML = ev.rubric ? `<img src="${ev.rubric}">` : `<p style="color:#cbd5e1; font-size:0.8rem;">등록된 이미지가 없습니다.</p>`;
         
-        // 선택 표시 강조
         document.querySelectorAll('.event-item').forEach(el => el.classList.remove('selected'));
         const target = document.getElementById(`ev-${selectedDateKey}-${selectedIndex}`);
         if(target) target.classList.add('selected');
     }
 
-    // 데이터 저장 (메모)
     window.saveData = () => {
         const memo = document.getElementById('memoInput').value;
         remoteEvents[selectedDateKey][selectedIndex].rubricText = memo;
@@ -284,7 +283,6 @@
         alert("변경사항이 저장되었습니다.");
     };
 
-    // 제목 수정
     window.editTitle = () => {
         const newTitle = prompt("수정할 제목을 입력하세요:", remoteEvents[selectedDateKey][selectedIndex].text);
         if(newTitle) {
@@ -293,7 +291,6 @@
         }
     };
 
-    // 사진 업로드
     window.uploadPhoto = (e) => {
         const reader = new FileReader();
         reader.onload = (ev) => {
@@ -304,7 +301,6 @@
         if(e.target.files[0]) reader.readAsDataURL(e.target.files[0]);
     };
 
-    // 삭제
     window.deleteEvent = () => {
         if(confirm("정말 이 일정을 삭제하시겠습니까?")) {
             remoteEvents[selectedDateKey].splice(selectedIndex, 1);
@@ -317,10 +313,7 @@
     };
 
     window.changeMonth = (v) => { currentDate.setMonth(currentDate.getMonth() + v); renderCalendar(); };
-    
-    // 엔터키 로그인 지원
     document.getElementById('studentIdInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') checkStudentID(); });
-
 </script>
 </body>
 </html>
