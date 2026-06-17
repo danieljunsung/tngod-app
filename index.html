@@ -130,7 +130,7 @@
             padding: 15px; border: 1px solid var(--border); border-radius: 12px; background: #fff;
             cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center;
         }
-        .bank-item:hover { border-color: var(--bank-color); background: #fefec8; background: #fbfbfe; }
+        .bank-item:hover { border-color: var(--bank-color); background: #fbfbfe; }
         .bank-item.selected { border-color: var(--bank-color); background: #f5f3ff; }
 
         /* 버튼 정의 */
@@ -284,7 +284,7 @@
 
     // 시스템 글로벌 상태 변수
     let currentDate = new Date();
-    let currentViewMode = 'calendar'; // calendar 또는 bank
+    let currentViewMode = 'calendar'; 
     let currentGrade = "1", currentClass = "1";
     let isTeacher = false, isManager = false;
     
@@ -476,10 +476,9 @@
 
     // 달력 날짜 빈공간 클릭 시 동작
     window.handleDayClick = (dateKey) => {
-        if (!isManager) return; // 임원 이상만 동작
+        if (!isManager) return; 
         
         targetModalDateKey = dateKey;
-        // 선택지 부여: 직접 새로 만들기 vs 보관함에서 퍼오기
         const choice = confirm("[수행평가 일정 등록]\n\n'확인'을 누르면 마스터 보관함에서 가져오고,\n'취소'를 누르면 직접 새 일정을 수동 입력합니다.");
         if (choice) {
             document.getElementById('bankImportModal').style.display = 'flex';
@@ -494,7 +493,7 @@
         }
     };
 
-    // 🗂️ 우측 디테일 패널 렌더링 엔진 (핵심)
+    // 🗂️ 우측 디테일 패널 렌더링 엔진 (오류 수정 완료 ✅)
     window.showDetails = (mode, keyOrId, idx = null) => {
         document.getElementById('placeholder').style.display = 'none';
         document.getElementById('infoContent').style.display = 'block';
@@ -509,11 +508,11 @@
             selectedDateKey = keyOrId; selectedIndex = idx; selectedBankId = null;
             targetData = remoteEvents[selectedDateKey][selectedIndex];
             
-            badge.innerText = "학급 일정"; badge.style.background = var(--accent);
+            // ✅ 변수가 아닌 문자열로 감싸서 에러 수정
+            badge.innerText = "학급 일정"; badge.style.background = "var(--accent)";
             document.getElementById('viewTitle').innerText = targetData.text;
             document.getElementById('viewDateOrSubject').innerText = `일정일: ${selectedDateKey} (${currentGrade}학년 ${currentClass}반)`;
             
-            // 편집 권한 방어막
             if (isManager) {
                 editor.setAttribute('contenteditable', 'true');
                 actionArea.innerHTML = `
@@ -538,7 +537,8 @@
             selectedBankId = keyOrId; selectedDateKey = null; selectedIndex = null;
             targetData = remoteBankItems[selectedBankId];
             
-            badge.innerText = "마스터 보관함"; badge.style.background = var(--bank-color);
+            // ✅ 변수가 아닌 문자열로 감싸서 에러 수정
+            badge.innerText = "마스터 보관함"; badge.style.background = "var(--bank-color)";
             document.getElementById('viewTitle').innerText = targetData.text;
             
             const targetGrade = isTeacher ? document.getElementById('bankGradeSel').value : currentGrade;
@@ -565,10 +565,8 @@
             loadBankList();
         }
 
-        // 데이터 표 및 텍스트 렌더링
         editor.innerHTML = targetData.rubricHtml || "";
         
-        // 사진 갤러리 처리
         const imgGrid = document.getElementById('imageGrid');
         imgGrid.innerHTML = '';
         const streamImages = targetData.images || [];
@@ -735,7 +733,6 @@
             if(source) {
                 if(!remoteEvents[targetModalDateKey]) remoteEvents[targetModalDateKey] = [];
                 
-                // 🚀 깊은 복사를 통한 마스터 데이터 이전 (제목, 복붙된 표 HTML, 사진 배열까지 통째로 복사)
                 remoteEvents[targetModalDateKey].push({
                     text: `[${subject}] ${source.text}`,
                     rubricHtml: source.rubricHtml || "",
@@ -745,7 +742,6 @@
                 db.ref(dbCalListener).set(remoteEvents).then(() => {
                     closeImportModal();
                     alert(`[${subject}] 평가 자료가 우리 반 달력에 정상 연동 복사되었습니다.`);
-                    // 복사 후 바로 그 창 띄워주기
                     showDetails('calendar', targetModalDateKey, remoteEvents[targetModalDateKey].length - 1);
                 });
             }
