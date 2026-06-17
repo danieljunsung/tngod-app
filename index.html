@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>수행평가 통합 관리 시스템</title>
+    <title>수행평가 통합 아카이브 및 관리 시스템</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap" rel="stylesheet">
@@ -11,7 +11,7 @@
         :root {
             --primary: #1e293b; --accent: #3b82f6; --bg: #f8fafc;
             --card: #ffffff; --border: #e2e8f0; --text: #334155;
-            --teacher-color: #10b981; 
+            --teacher-color: #10b981; --bank-color: #8b5cf6;
         }
 
         body {
@@ -22,7 +22,7 @@
         /* 로그인 화면 */
         .login-container {
             width: 100%; max-width: 440px; background: var(--card); padding: 40px;
-            border-radius: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05), 0 10px 10px -5px rgba(0,0,0,0.04);
+            border-radius: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05);
             align-self: center; border: 1px solid var(--border);
         }
         
@@ -36,213 +36,233 @@
 
         .login-input {
             width: 100%; padding: 14px; margin-bottom: 15px; border: 2px solid var(--border);
-            border-radius: 12px; font-size: 1.1rem; font-family: inherit; font-weight: 600;
-            box-sizing: border-box; transition: 0.2s; text-align: center;
+            border-radius: 12px; font-size: 1.1rem; box-sizing: border-box; text-align: center; font-weight: 600;
         }
-        .login-input:focus { border-color: var(--accent); outline: none; background: #fff; }
         
         .login-btn {
             width: 100%; padding: 14px; color: white; border: none; border-radius: 12px; 
-            font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s;
+            font-size: 1.1rem; font-weight: bold; cursor: pointer;
         }
         .btn-student { background: var(--accent); }
-        .btn-student:hover { background: #2563eb; }
         .btn-teacher { background: var(--teacher-color); }
-        .btn-teacher:hover { background: #059669; }
 
-        /* 메인 대시보드 레이아웃 */
+        /* 메인 레이아웃 */
         .app-wrapper {
-            display: none; width: 100%; max-width: 1400px; padding: 40px 20px;
-            gap: 30px; grid-template-columns: 1.4fr 1.6fr; box-sizing: border-box;
+            display: none; width: 100%; max-width: 1500px; padding: 30px 20px;
+            gap: 25px; grid-template-columns: 1.3fr 1.7fr; box-sizing: border-box;
         }
 
-        .calendar-section, .info-section {
-            background: var(--card); border-radius: 24px; padding: 30px;
+        .left-section, .right-section {
+            background: var(--card); border-radius: 24px; padding: 25px;
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); border: 1px solid var(--border);
-            box-sizing: border-box;
+            box-sizing: border-box; display: flex; flex-direction: column; gap: 20px;
         }
 
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 10px; }
-        .calendar-nav { display: flex; align-items: center; gap: 15px; }
-        .calendar-nav h1 { font-size: 1.4rem; margin: 0; color: var(--primary); }
-        .nav-btn { background: #f1f5f9; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: bold; font-family: inherit; }
-        .nav-btn:hover { background: #e2e8f0; }
+        /* 탭 가르기 (달력보기 vs 교사 보관함) */
+        .view-mode-tabs { display: flex; gap: 10px; border-bottom: 2px solid var(--border); padding-bottom: 10px; }
+        .mode-tab-btn {
+            background: none; border: none; padding: 8px 16px; font-size: 1rem; font-weight: 700;
+            color: #94a3b8; cursor: pointer; transition: 0.2s; border-radius: 8px;
+        }
+        .mode-tab-btn.active { color: var(--primary); background: #f1f5f9; }
 
-        .role-badge { padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; background: #eff6ff; color: var(--accent); }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .calendar-nav { display: flex; align-items: center; gap: 12px; }
+        .calendar-nav h1 { font-size: 1.3rem; margin: 0; color: var(--primary); }
+        .nav-btn { background: #f1f5f9; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; }
 
-        /* 학급 선택 드롭다운 스타일 */
+        .role-badge { padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; background: #f1f5f9; }
+
         .top-select {
             padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px;
-            font-size: 1rem; font-weight: 700; color: var(--primary); background: #f8fafc;
-            cursor: pointer; font-family: inherit; outline: none;
+            font-size: 0.95rem; font-weight: 700; color: var(--primary); background: #f8fafc; outline: none;
         }
-        .top-select:focus { border-color: var(--teacher-color); background: white; }
 
+        /* 달력 그리드 */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
-        .day-name { text-align: center; font-weight: 600; font-size: 0.85rem; color: #94a3b8; padding-bottom: 8px; }
+        .day-name { text-align: center; font-weight: 600; font-size: 0.85rem; color: #94a3b8; padding-bottom: 4px; }
         .day {
-            background: #fff; border: 1px solid var(--border); min-height: 100px;
-            padding: 8px; border-radius: 12px; cursor: pointer; transition: 0.2s;
+            background: #fff; border: 1px solid var(--border); min-height: 95px;
+            padding: 6px; border-radius: 12px; cursor: pointer; transition: 0.2s;
             display: flex; flex-direction: column; gap: 4px; box-sizing: border-box; overflow: hidden;
         }
         .day:hover { border-color: var(--accent); background: #f8fafc; }
         .day.today { border: 2px solid var(--accent); background: #eff6ff; }
-        .day-number { font-weight: 700; font-size: 0.9rem; margin-bottom: 2px; display: block; }
+        .day-number { font-weight: 700; font-size: 0.85rem; }
 
         .event-item {
             background: var(--accent); color: white; border-radius: 6px;
-            padding: 4px 8px; font-size: 0.75rem; font-weight: 600;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-            width: 100%; box-sizing: border-box; display: block;
+            padding: 3px 6px; font-size: 0.72rem; font-weight: 600;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; box-sizing: border-box;
         }
         .event-item.selected { background: var(--primary); outline: 2px solid var(--accent); }
 
-        .info-section { position: sticky; top: 40px; height: fit-content; display: flex; flex-direction: column; gap: 18px; }
-        .info-placeholder { color: #94a3b8; text-align: center; padding: 150px 0; font-size: 1.05rem; line-height: 1.6; }
-        
-        .info-header { border-bottom: 2px solid var(--bg); padding-bottom: 15px; margin-bottom: 5px; }
-        .info-header h2 { margin: 0; font-size: 1.5rem; color: var(--primary); word-break: break-all; }
-        
-        .memo-area {
-            width: 100%; height: 200px; border: 1px solid var(--border); border-radius: 14px;
-            padding: 18px; font-family: inherit; font-size: 1rem; line-height: 1.6; resize: vertical;
-            background: #f8fafc; box-sizing: border-box; color: #1e293b; transition: 0.2s;
+        /* 📋 표 복붙 전용 스마트 에디터 */
+        .rubric-editor {
+            width: 100%; min-height: 25px; max-height: 350px; border: 1px solid var(--border);
+            border-radius: 14px; padding: 15px; background: #f8fafc;
+            overflow-y: auto; outline: none; box-sizing: border-box; font-size: 0.95rem; line-height: 1.6;
         }
-        .memo-area:focus { background: #fff; border-color: var(--accent); outline: none; }
-        .memo-area:disabled { background: #f1f5f9; color: #64748b; cursor: not-allowed; }
+        .rubric-editor:focus { background: #fff; border-color: var(--accent); }
+        .rubric-editor[contenteditable="false"] { background: #f1f5f9; color: #475569; cursor: not-allowed; }
+        
+        /* 에디터 내부 표 스타일 깨짐 방지 */
+        .rubric-editor table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 0.9rem; }
+        .rubric-editor th, .rubric-editor td { border: 1px solid #cbd5e1; padding: 8px; text-align: center; }
+        .rubric-editor th { background-color: #f1f5f9; font-weight: bold; }
 
-        /* 📸 사진 갤러리 영역 스타일 (복구 및 유지) */
-        .image-gallery-container {
-            border: 1px dashed var(--border); border-radius: 14px; padding: 15px;
-            background: #f8fafc; min-height: 120px; box-sizing: border-box;
-        }
-        .image-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 12px; margin-top: 5px;
-        }
+        /* 사진 갤러리 */
+        .image-gallery-container { border: 1px dashed var(--border); border-radius: 14px; padding: 12px; background: #f8fafc; }
+        .image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; }
         .image-wrapper {
             position: relative; aspect-ratio: 1 / 1; border-radius: 8px; overflow: hidden;
             border: 1px solid var(--border); background: #fff; display: flex; justify-content: center; align-items: center;
         }
         .image-wrapper img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
-        
-        /* ✕ 사진 개별 삭제 버튼 */
         .img-delete-btn {
             position: absolute; top: 4px; right: 4px; background: rgba(239, 68, 68, 0.9);
-            color: white; border: none; border-radius: 5px; width: 22px; height: 22px;
-            font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;
-            z-index: 10; display: none; /* 기본적으로 숨김 */
+            color: white; border: none; border-radius: 5px; width: 20px; height: 20px;
+            font-size: 10px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10;
         }
-        /* 수정 권한이 있을 때만 삭제 버튼 노출 */
-        .has-edit-auth .img-delete-btn { display: flex; }
 
-        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px; }
-        .btn {
-            flex: 1; padding: 12px; border: none; border-radius: 10px;
-            font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 0.9rem;
+        /* 보관함 리스트 스타일 */
+        .bank-item {
+            padding: 15px; border: 1px solid var(--border); border-radius: 12px; background: #fff;
+            cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center;
         }
+        .bank-item:hover { border-color: var(--bank-color); background: #fefec8; background: #fbfbfe; }
+        .bank-item.selected { border-color: var(--bank-color); background: #f5f3ff; }
+
+        /* 버튼 정의 */
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn { flex: 1; padding: 11px; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 0.88rem; transition: 0.2s; text-align: center;}
         .btn-save { background: var(--accent); color: white; }
-        .btn-save:hover { background: #2563eb; }
         .btn-delete { background: #fee2e2; color: #ef4444; }
-        .btn-delete:hover { background: #fecaca; }
-        .btn-upload { background: #f1f5f9; color: var(--text); border: 1px solid var(--border); text-align: center; display: block; cursor: pointer; padding: 12px; border-radius: 10px; font-weight: 600; font-size: 0.9rem; flex: 1;}
-        .btn-upload:hover { background: #e2e8f0; }
+        .btn-bank { background: var(--bank-color); color: white; }
+        .btn-upload { background: #f1f5f9; color: var(--text); border: 1px solid var(--border); display: block; cursor: pointer; }
 
-        /* 권한 제어용 클래스 */
-        .edit-only { display: none; } /* 임원/교사 공통 편집 */
-        .admin-only { display: none; } /* 오직 교사(초기화) */
+        /* 모달 팝업 (가져오기 기능용) */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 550px; max-height: 80vh; overflow-y: auto; }
 
+        .edit-only, .admin-only, .teacher-only { display: none; }
         #fileInput { display: none; }
-
-        @media (max-width: 1024px) {
-            .app-wrapper { grid-template-columns: 1fr; }
-            .info-section { position: static; }
-        }
     </style>
 </head>
 <body>
 
 <div class="login-container" id="loginScreen">
-    <h2 style="font-size:1.6rem; margin-bottom:20px; text-align:center;">🎓 수행평가 통합 시스템</h2>
-    
+    <h2 style="font-size:1.5rem; margin-bottom:20px; text-align:center;">🎓 수행평가 통합 아카이브</h2>
     <div class="login-tabs">
-        <button class="tab-btn active student" id="tabStudent" onclick="switchTab('student')">학생 로그인</button>
+        <button class="tab-btn active student" id="tabStudent" onclick="switchTab('student')">학생/임원</button>
         <button class="tab-btn" id="tabTeacher" onclick="switchTab('teacher')">교사 로그인</button>
     </div>
-
     <div id="studentForm">
-        <input type="text" id="studentIdInput" class="login-input" placeholder="학번 5자리 입력 (예: 10312)" maxlength="5">
+        <input type="text" id="studentIdInput" class="login-input" placeholder="학번 5자리 (예: 10312)" maxlength="5">
         <input type="password" id="managerCodeInput" class="login-input" placeholder="임원 인증 코드 (일반 학생 생략)" maxlength="4">
-        <button class="login-btn btn-student" onclick="loginStudent()">조회하기</button>
+        <button class="login-btn btn-student" onclick="loginStudent()">시스템 접속</button>
     </div>
-
     <div id="teacherForm" style="display: none;">
-        <input type="password" id="teacherPwInput" class="login-input" placeholder="교사 비밀번호 입력" style="letter-spacing: 2px;">
-        <button class="login-btn btn-teacher" onclick="loginTeacher()">관리자로 입장</button>
-        <p style="font-size:0.75rem; color:#94a3b8; margin-top:10px; text-align:center;">초기 비밀번호: admin</p>
+        <input type="password" id="teacherPwInput" class="login-input" placeholder="교사 패스워드">
+        <button class="login-btn btn-teacher" onclick="loginTeacher()">관리자 로그인</button>
     </div>
 </div>
 
 <div class="app-wrapper" id="mainApp">
-    <div class="calendar-section">
-        <div class="top-bar">
-            <div class="calendar-nav">
-                <button class="nav-btn" onclick="changeMonth(-1)">◀</button>
-                <h1 id="monthYear">2026년 6월</h1>
-                <button class="nav-btn" onclick="changeMonth(1)">▶</button>
-            </div>
-            
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <div id="classDisplayArea" style="display: flex; gap: 6px; align-items: center;"></div>
-                <div id="userRoleBadge" class="role-badge">학생</div>
-            </div>
+    
+    <div class="left-section">
+        <div class="view-mode-tabs">
+            <button class="mode-tab-btn active" id="modeCalBtn" onclick="switchViewMode('calendar')">📅 학급 달력</button>
+            <button class="mode-tab-btn" id="modeBankBtn" onclick="switchViewMode('bank')">🗂️ 과목별 마스터 보관함</button>
         </div>
-        <div class="calendar-grid" id="calendarGrid"></div>
-        
-        <div style="margin-top:20px; display: flex; justify-content: space-between; align-items: center;">
-            <div><button class="admin-only" onclick="resetAllData()" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.8rem; font-weight: bold;">⚠️ 반 전체 일정 초기화</button></div>
+
+        <div id="calendarViewContainer">
+            <div class="top-bar">
+                <div class="calendar-nav">
+                    <button class="nav-btn" onclick="changeMonth(-1)">◀</button>
+                    <h1 id="monthYear"></h1>
+                    <button class="nav-btn" onclick="changeMonth(1)">▶</button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div id="classDisplayArea"></div>
+                    <div id="userRoleBadge" class="role-badge">학생</div>
+                </div>
+            </div>
+            <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+
+        <div id="bankViewContainer" style="display: none;">
+            <div class="top-bar">
+                <h2 style="margin:0; font-size:1.2rem; color:var(--bank-color);">🗂️ 수행평가 마스터 뱅크</h2>
+                <div id="bankRoleBadge" class="role-badge">조회용</div>
+            </div>
+            <div style="display:flex; gap:8px; margin-bottom:10px;">
+                <select id="bankGradeSel" class="top-select" onchange="loadBankList()">
+                    <option value="1">1학년 (22개정)</option>
+                    <option value="2">2학년 (22개정)</option>
+                </select>
+                <select id="bankTermSel" class="top-select" onchange="loadBankList()">
+                    <option value="1학기">1학기</option>
+                    <option value="2학기">2학기</option>
+                </select>
+                <select id="bankSubjectSel" class="top-select" style="flex:1;" onchange="loadBankList()"></select>
+            </div>
+            <div class="teacher-only" style="margin-bottom: 12px;">
+                <button class="btn btn-bank" style="width:100%;" onclick="createNewBankItem()">➕ 해당 과목에 새 평가기준표 추가</button>
+            </div>
+            <div id="bankListArea" style="display:flex; flex-direction:column; gap:10px; max-height:450px; overflow-y:auto;"></div>
+        </div>
+
+        <div style="margin-top:auto; display: flex; justify-content: space-between; align-items: center;">
+            <button class="admin-only" onclick="resetClassData()" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:0.8rem; font-weight: bold;">⚠️ 현재 학급 달력 전체 초기화</button>
             <button onclick="location.reload()" style="background:none; border:none; color:#94a3b8; cursor:pointer; font-size:0.8rem; font-weight: bold;">🔄 로그아웃</button>
         </div>
     </div>
 
-    <div class="info-section" id="infoSection">
-        <div class="info-placeholder" id="placeholder">
-            <p>📅 달력의 날짜나<br>수행평가 항목을 선택하세요.</p>
+    <div class="right-section">
+        <div id="placeholder" class="image-gallery-container" style="text-align:center; color:#94a3b8; padding:150px 0; font-size:1rem; font-weight: bold; border:none;">
+            📅 달력의 일정이나 🗂️ 보관함의 평가기준을 선택해 주세요.
         </div>
-        
-        <div id="infoContent" style="display:none;">
-            <div class="info-header">
-                <h2 id="viewTitle">수행평가 제목</h2>
-                <p id="viewDate" style="color:#64748b; font-size:0.9rem; font-weight: bold; margin-top:5px;"></p>
+
+        <div id="infoContent" style="display: none;">
+            <div style="border-bottom: 2px solid var(--bg); padding-bottom: 12px; margin-bottom: 5px;">
+                <span id="infoCategoryBadge" style="padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; color: white;"></span>
+                <h2 id="viewTitle" style="margin: 8px 0 4px 0; font-size:1.4rem; color:var(--primary);"></h2>
+                <p id="viewDateOrSubject" style="margin:0; color:#64748b; font-size:0.88rem; font-weight: 600;"></p>
             </div>
 
-            <label style="font-size:0.85rem; font-weight:700; color:var(--primary); display:block; margin-bottom:4px;">📋 상세 메모 및 채점 기준(루브릭)</label>
-            <textarea id="memoInput" class="memo-area" placeholder="수행평가 범위, 준비물, 채점 기준 등을 자유롭게 적어보세요."></textarea>
+            <label style="font-size:0.85rem; font-weight:700; color:var(--primary); display:block;">📋 수행평가 세부 기준표 (한글/엑셀 표 복사-붙여넣기 가능)</label>
+            <div id="rubricEditor" class="rubric-editor" contenteditable="true" placeholder="여기에 표를 복사해서 붙여넣거나 세부 루브릭 내용을 입력하세요."></div>
 
-            <label style="font-size:0.85rem; font-weight:700; color:var(--primary); display:block; margin-bottom:4px; margin-top:10px;">🖼️ 등록된 평가 지표 / 안내 사진</label>
-            <div class="image-gallery-container" id="imageGalleryNode">
+            <label style="font-size:0.85rem; font-weight:700; color:var(--primary); display:block; margin-top:5px;">🖼️ 안내 이미지 및 평가지표 사진</label>
+            <div class="image-gallery-container">
                 <div class="image-grid" id="imageGrid"></div>
             </div>
 
-            <div class="edit-only">
-                <div class="btn-group">
-                    <label for="fileInput" class="btn-upload">📷 사진 추가 (다중 선택)</label>
-                    <input type="file" id="fileInput" accept="image/*" multiple onchange="uploadPhotos(event)">
-                    <button class="btn btn-save" onclick="saveData()">💾 변경사항 저장</button>
-                </div>
-                <div class="btn-group" style="margin-top:10px;">
-                    <button class="btn" style="background:#f1f5f9; color: var(--text);" onclick="editTitle()">✏️ 일정 제목 수정</button>
-                    <button class="btn btn-delete" onclick="deleteEvent()">🗑️ 해당 일정 삭제</button>
-                </div>
-            </div>
-            
-            <div id="studentNotice" style="font-size:0.8rem; color:#94a3b8; text-align:center; margin-top:10px;">
-                ℹ️ 학생 모드에서는 일정 및 루브릭을 수정할 수 없습니다.
-            </div>
+            <div id="actionButtonGroup" style="margin-top:10px;"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="bankImportModal">
+    <div class="modal-content">
+        <h3 style="margin-top:0; color:var(--bank-color);">🗂️ 마스터 보관함에서 평가기준 가져오기</h3>
+        <p style="font-size:0.85rem; color:#64748b; margin-top:-10px;">우리 반 달력에 등록할 과목의 마스터 평가 기준을 선택하세요.</p>
+        <div style="display:flex; gap:6px; margin-bottom:12px;">
+            <select id="modalTermSel" class="top-select" onchange="loadModalBankList()">
+                <option value="1학기">1학기</option><option value="2학기">2학기</option>
+            </select>
+            <select id="modalSubjectSel" class="top-select" style="flex:1;" onchange="loadModalBankList()"></select>
+        </div>
+        <div id="modalBankListArea" style="display:flex; flex-direction:column; gap:8px; max-height:300px; overflow-y:auto; margin-bottom:15px;"></div>
+        <div style="display:flex; gap:10px;">
+            <button class="btn" style="background:#e2e8f0; color:var(--text);" onclick="closeImportModal()">취소</button>
         </div>
     </div>
 </div>
 
 <script>
+    // 🔗 파이어베이스 이니셜라이즈
     const firebaseConfig = {
         apiKey: "AIzaSyCHIC8vWvhsNSQdwxRPh56WTMGC89JuOXk",
         authDomain: "tngod-app.firebaseapp.com",
@@ -256,308 +276,483 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // 📚 2022 개정 교육과정 학년별 과목 매핑 테이블
+    const subjectsConfig = {
+        "1": ["공통국어1", "공통수학1", "공통영어1", "한국사1", "통합사회1", "통합과학1", "과학탐구실험1", "체육1", "음악", "미술", "인공지능기초", "한문"],
+        "2": ["문학", "주제 탐구 독서", "대수", "미적분Ⅰ", "영어Ⅰ", "세계시민과 지리", "세계사", "사회와 문화", "현대사회와 윤리", "국제 관계의 이해", "물리학", "화학", "생명과학", "지구과학", "스포츠 생활1", "중국어", "일본어"]
+    };
+
+    // 시스템 글로벌 상태 변수
     let currentDate = new Date();
-    let remoteEvents = {};
-    let selectedDateKey = null, selectedIndex = null;
-    let currentGrade = null, currentClass = null;
-    let isTeacher = false; // 오직 교사
-    let isManager = false; // 임원 (편집권한 가짐)
-    let dbListener = null;
+    let currentViewMode = 'calendar'; // calendar 또는 bank
+    let currentGrade = "1", currentClass = "1";
+    let isTeacher = false, isManager = false;
+    
+    // 데이터 스냅샷 저장소
+    let remoteEvents = {}; 
+    let remoteBankItems = {};
+    
+    // 타겟팅 인덱서
+    let selectedDateKey = null, selectedIndex = null, selectedBankId = null;
+    let dbCalListener = null, dbBankListener = null;
+    let targetModalDateKey = null;
 
     window.switchTab = (type) => {
-        document.getElementById('tabStudent').classList.remove('active', 'student');
-        document.getElementById('tabTeacher').classList.remove('active', 'teacher');
-        document.getElementById('studentForm').style.display = 'none';
-        document.getElementById('teacherForm').style.display = 'none';
-        if(type === 'student') {
-            document.getElementById('tabStudent').classList.add('active', 'student');
-            document.getElementById('studentForm').style.display = 'block';
-        } else {
-            document.getElementById('tabTeacher').classList.add('active', 'teacher');
-            document.getElementById('teacherForm').style.display = 'block';
-        }
+        document.getElementById('tabStudent').classList.toggle('active', type === 'student');
+        document.getElementById('tabStudent').classList.toggle('student', type === 'student');
+        document.getElementById('tabTeacher').classList.toggle('active', type === 'teacher');
+        document.getElementById('tabTeacher').classList.toggle('teacher', type === 'teacher');
+        document.getElementById('studentForm').style.display = type === 'student' ? 'block' : 'none';
+        document.getElementById('teacherForm').style.display = type === 'teacher' ? 'block' : 'none';
     };
 
-    // 🎓 학생/임원 로그인
+    // 로그인 - 학생 / 임원
     window.loginStudent = () => {
-        const inputId = document.getElementById('studentIdInput').value.trim();
-        const managerCode = document.getElementById('managerCodeInput').value.trim();
-        
-        if (/^\d{5}$/.test(inputId)) {
-            currentGrade = inputId.substring(0, 1);
-            currentClass = parseInt(inputId.substring(1, 3), 10).toString();
-            
-            if (currentGrade >= 1 && currentGrade <= 3 && currentClass >= 1 && currentClass <= 14) {
+        const idInput = document.getElementById('studentIdInput').value.trim();
+        const codeInput = document.getElementById('managerCodeInput').value.trim();
+        if (/^\d{5}$/.test(idInput)) {
+            currentGrade = idInput.substring(0, 1);
+            currentClass = parseInt(idInput.substring(1, 3), 10).toString();
+            if (subjectsConfig[currentGrade]) {
                 isTeacher = false;
-                // 🌟 임원 인증 코드 확인 (필요시 변경)
-                isManager = (managerCode === "1234"); 
-                enterApp();
-            } else { alert("학년/반 정보가 시스템 범위 바깥입니다."); }
-        } else { alert("올바른 5자리 학번을 입력하세요."); }
+                isManager = (codeInput === "1234"); // 🌟 임원 코드 매핑
+                initApp();
+            } else { alert("해당 학년 정보가 존재하지 않습니다."); }
+        } else { alert("학번 5자리를 정확히 입력해 주세요."); }
     };
 
-    // 👨‍🏫 교사 로그인
+    // 로그인 - 교사
     window.loginTeacher = () => {
-        const pw = document.getElementById('teacherPwInput').value.trim();
-        if (pw === "admin") {
-            isTeacher = true;
-            isManager = true; // 교사는 임원 권한도 당연히 가짐
-            currentGrade = "1"; // 초기 진입 학년
-            currentClass = "1"; // 초기 진입 반
-            enterApp();
-        } else { alert("교사 비밀번호가 일치하지 않습니다."); }
+        if (document.getElementById('teacherPwInput').value.trim() === "admin") {
+            isTeacher = true; isManager = true;
+            currentGrade = "1"; currentClass = "1";
+            initApp();
+        } else { alert("비밀번호 유효성 인증에 실패했습니다."); }
     };
 
-    function enterApp() {
+    function initApp() {
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('mainApp').style.display = 'grid';
         
-        // 🚀 달력 즉시 렌더링 (빈화면 방지)
-        renderCalendar();
-        
+        // 과목 선택 대분류 갱신
+        updateSubjectDropdowns();
+        switchViewMode('calendar');
+
         const displayArea = document.getElementById('classDisplayArea');
-        const badge = document.getElementById('userRoleBadge');
-        
+        const roleBadge = document.getElementById('userRoleBadge');
+        const bankBadge = document.getElementById('bankRoleBadge');
+
         if (isTeacher) {
-            badge.innerText = "교사";
-            badge.style.background = "#ecfdf5"; badge.style.color = "var(--teacher-color)";
-            // 교사 전용(초기화) 버튼 노출
-            document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
-            
-            // 🌟 교사 전용 학급 실시간 선택 드롭다운 생성
+            roleBadge.innerText = "교사"; roleBadge.style.color = "var(--teacher-color)";
+            bankBadge.innerText = "교사(마스터 편집)"; bankBadge.style.color = "var(--teacher-color)";
+            document.querySelectorAll('.admin-only, .teacher-only').forEach(el => el.style.display = 'block');
+
             displayArea.innerHTML = `
-                <select id="mainGradeSelect" class="top-select" onchange="handleClassChange()">
-                    <option value="1">1학년</option><option value="2">2학년</option><option value="3">3학년</option>
+                <select id="mainGradeSelect" class="top-select" onchange="handleClassParamChange()">
+                    <option value="1">1학년</option><option value="2">2학년</option>
                 </select>
-                <select id="mainClassSelect" class="top-select" onchange="handleClassChange()">
+                <select id="mainClassSelect" class="top-select" onchange="handleClassParamChange()">
                     ${Array.from({length: 14}, (_, i) => `<option value="${i+1}">${i+1}반</option>`).join('')}
                 </select>
             `;
             document.getElementById('mainGradeSelect').value = currentGrade;
             document.getElementById('mainClassSelect').value = currentClass;
         } else {
-            // 학생 또는 임원
+            document.querySelectorAll('.admin-only, .teacher-only').forEach(el => el.style.display = 'none');
             if (isManager) {
-                badge.innerText = "임원";
-                badge.style.background = "#eff6ff"; badge.style.color = "var(--accent)";
+                roleBadge.innerText = "임원 권한"; roleBadge.style.color = "var(--accent)";
+                bankBadge.innerText = "임원(가져오기 가능)"; bankBadge.style.color = "var(--accent)";
             } else {
-                badge.innerText = "학생";
-                badge.style.background = "#f1f5f9"; badge.style.color = "var(--text)";
+                roleBadge.innerText = "학생"; roleBadge.style.color = "var(--text)";
+                bankBadge.innerText = "학생(조회 전용)"; bankBadge.style.color = "var(--text)";
             }
-            // 학생/임원은 학급 변경 불가 (텍스트 표시)
-            displayArea.innerHTML = `<div class="class-title">${currentGrade}학년 ${currentClass}반</div>`;
+            displayArea.innerHTML = `<span style="font-weight:700; font-size:1.1rem;">${currentGrade}학년 ${currentClass}반</span>`;
         }
-
-        // 🛠️ 편집 권한(임원 or 교사)이 있다면 편집 UI 노출
-        if (isManager) {
-            document.querySelectorAll('.edit-only').forEach(el => el.style.display = 'block');
-            document.getElementById('studentNotice').style.display = 'none';
-            document.getElementById('memoInput').removeAttribute('disabled');
-            // 사진 삭제 버튼 활성화를 위한 클래스 부여
-            document.getElementById('imageGalleryNode').classList.add('has-edit-auth');
-        } else {
-            document.querySelectorAll('.edit-only').forEach(el => el.style.display = 'none');
-            document.getElementById('studentNotice').style.display = 'block';
-            document.getElementById('memoInput').setAttribute('disabled', 'true');
-        }
-        
-        listenToEvents();
+        syncCalendarListener();
     }
 
-    // 교사용 학급 실시간 변경 함수
-    window.handleClassChange = () => {
+    function updateSubjectDropdowns() {
+        const subList = subjectsConfig[currentGrade] || [];
+        const makeOptions = () => subList.map(s => `<option value="${s}">${s}</option>`).join('');
+        
+        document.getElementById('bankSubjectSel').innerHTML = makeOptions();
+        document.getElementById('modalSubjectSel').innerHTML = makeOptions();
+    }
+
+    function handleClassParamChange() {
         currentGrade = document.getElementById('mainGradeSelect').value;
         currentClass = document.getElementById('mainClassSelect').value;
-        
-        // 상세창 초기화
-        selectedDateKey = null; selectedIndex = null;
+        updateSubjectDropdowns();
+        resetRightPanel();
+        syncCalendarListener();
+        if (currentViewMode === 'bank') loadBankList();
+    }
+
+    function switchViewMode(mode) {
+        currentViewMode = mode;
+        document.getElementById('modeCalBtn').classList.toggle('active', mode === 'calendar');
+        document.getElementById('modeBankBtn').classList.toggle('active', mode === 'bank');
+        document.getElementById('calendarViewContainer').style.display = mode === 'calendar' ? 'block' : 'none';
+        document.getElementById('bankViewContainer').style.display = mode === 'bank' ? 'block' : 'none';
+        resetRightPanel();
+        if(mode === 'bank') {
+            document.getElementById('bankGradeSel').value = currentGrade;
+            loadBankList();
+        }
+    }
+
+    function resetRightPanel() {
+        selectedDateKey = null; selectedIndex = null; selectedBankId = null;
         document.getElementById('infoContent').style.display = 'none';
         document.getElementById('placeholder').style.display = 'block';
-        
-        listenToEvents();
-    };
+    }
 
-    function listenToEvents() {
-        if (dbListener) db.ref(dbListener).off();
-        dbListener = `grade_${currentGrade}/class_${currentClass}/events`;
-        db.ref(dbListener).on("value", (snapshot) => {
-            remoteEvents = snapshot.val() || {};
-            renderCalendar();
-            if(selectedDateKey) updateSidePanel();
+    // 📡 실시간 리스너 연결 - 학급 달력
+    function syncCalendarListener() {
+        if (dbCalListener) db.ref(dbCalListener).off();
+        dbCalListener = `class_schedules/grade_${currentGrade}/class_${currentClass}`;
+        db.ref(dbCalListener).on("value", (snap) => {
+            remoteEvents = snap.val() || {};
+            renderCalendarLayout();
+            if (currentViewMode === 'calendar' && selectedDateKey) showDetails('calendar', selectedDateKey, selectedIndex);
         });
     }
 
-    function renderCalendar() {
+    // 📡 실시간 리스너 연결 - 과목별 마스터 보관함
+    function loadBankList() {
+        const targetGrade = isTeacher ? document.getElementById('bankGradeSel').value : currentGrade;
+        const term = document.getElementById('bankTermSel').value;
+        const subject = document.getElementById('bankSubjectSel').value;
+
+        if (dbBankListener) db.ref(dbBankListener).off();
+        dbBankListener = `master_bank/grade_${targetGrade}/${term}/${subject}`;
+        
+        db.ref(dbBankListener).on("value", (snap) => {
+            remoteBankItems = snap.val() || {};
+            const listArea = document.getElementById('bankListArea');
+            listArea.innerHTML = '';
+
+            const keys = Object.keys(remoteBankItems);
+            if(keys.length === 0) {
+                listArea.innerHTML = `<p style="text-align:center; font-size:0.85rem; color:#94a3b8; padding:30px 0;">보관함에 등록된 평가기준표가 없습니다.</p>`;
+                return;
+            }
+
+            keys.forEach(id => {
+                const item = remoteBankItems[id];
+                const isSel = (selectedBankId === id) ? 'selected' : '';
+                listArea.innerHTML += `
+                    <div class="bank-item ${isSel}" onclick="showDetails('bank', '${id}')">
+                        <div>
+                            <div style="font-weight:700; color:var(--primary);">${item.text}</div>
+                            <div style="font-size:0.75rem; color:#94a3b8; margin-top:4px;">작성자: 관리교사</div>
+                        </div>
+                        <span style="font-size:1.1rem; color:var(--bank-color);">▶</span>
+                    </div>`;
+            });
+        });
+    }
+
+    // 📅 달력 그리드 배치
+    function renderCalendarLayout() {
         const year = currentDate.getFullYear(), month = currentDate.getMonth();
         document.getElementById('monthYear').innerText = `${year}년 ${month + 1}월`;
         const grid = document.getElementById('calendarGrid');
         grid.innerHTML = ['일','월','화','수','목','금','토'].map(d => `<div class="day-name">${d}</div>`).join('');
 
-        const first = new Date(year, month, 1).getDay();
-        const last = new Date(year, month + 1, 0).getDate();
+        const firstDayIdx = new Date(year, month, 1).getDay();
+        const lastDate = new Date(year, month + 1, 0).getDate();
 
-        for (let i = 0; i < first; i++) grid.innerHTML += `<div class="day" style="border:none; cursor:default;"></div>`;
-        for (let i = 1; i <= last; i++) {
-            const key = `${year}-${month + 1}-${i}`;
+        for (let i = 0; i < firstDayIdx; i++) grid.innerHTML += `<div class="day" style="border:none; background:none; cursor:default;"></div>`;
+        for (let i = 1; i <= lastDate; i++) {
+            const dateKey = `${year}-${month + 1}-${i}`;
             const isToday = (new Date().toDateString() === new Date(year, month, i).toDateString()) ? 'today' : '';
-            const events = (remoteEvents[key] || []).map((ev, idx) => 
-                `<div class="event-item" id="ev-${key}-${idx}" onclick="selectEvent('${key}', ${idx}, event)">${ev.text}</div>`
+            const evsHtml = (remoteEvents[dateKey] || []).map((ev, idx) => 
+                `<div class="event-item" id="cal-${dateKey}-${idx}" onclick="showDetails('calendar', '${dateKey}', ${idx}); event.stopPropagation();">${ev.text}</div>`
             ).join('');
-            grid.innerHTML += `<div class="day ${isToday}" onclick="clickDay('${key}')"><span class="day-number">${i}</span>${events}</div>`;
+            grid.innerHTML += `<div class="day ${isToday}" onclick="handleDayClick('${dateKey}')"><span class="day-number">${i}</span>${evsHtml}</div>`;
         }
     }
 
-    window.clickDay = (key) => {
-        if(!isManager) return; // 🌟 임원/교사만 일정 생성 가능
+    // 달력 날짜 빈공간 클릭 시 동작
+    window.handleDayClick = (dateKey) => {
+        if (!isManager) return; // 임원 이상만 동작
         
-        const txt = prompt('새로운 수행평가 과목/항목을 생성합니다:');
-        if (txt) {
-            if (!remoteEvents[key]) remoteEvents[key] = [];
-            // 사진 배열(images) 초기화 포함
-            remoteEvents[key].push({ text: txt, rubricText: "", images: [] });
-            db.ref(`grade_${currentGrade}/class_${currentClass}/events`).set(remoteEvents);
-            selectEvent(key, remoteEvents[key].length - 1);
+        targetModalDateKey = dateKey;
+        // 선택지 부여: 직접 새로 만들기 vs 보관함에서 퍼오기
+        const choice = confirm("[수행평가 일정 등록]\n\n'확인'을 누르면 마스터 보관함에서 가져오고,\n'취소'를 누르면 직접 새 일정을 수동 입력합니다.");
+        if (choice) {
+            document.getElementById('bankImportModal').style.display = 'flex';
+            loadModalBankList();
+        } else {
+            const customTitle = prompt("직접 입력할 수행평가 일정을 적어주세요:");
+            if (customTitle) {
+                if (!remoteEvents[dateKey]) remoteEvents[dateKey] = [];
+                remoteEvents[dateKey].push({ text: customTitle, rubricHtml: "", images: [] });
+                db.ref(dbCalListener).set(remoteEvents);
+            }
         }
     };
 
-    window.selectEvent = (key, idx, e) => {
-        if(e) e.stopPropagation();
-        selectedDateKey = key;
-        selectedIndex = idx;
-        updateSidePanel();
-    };
-
-    function updateSidePanel() {
-        if (!remoteEvents[selectedDateKey] || !remoteEvents[selectedDateKey][selectedIndex]) {
-            document.getElementById('infoContent').style.display = 'none';
-            document.getElementById('placeholder').style.display = 'block';
-            return;
-        }
-
-        const ev = remoteEvents[selectedDateKey][selectedIndex];
+    // 🗂️ 우측 디테일 패널 렌더링 엔진 (핵심)
+    window.showDetails = (mode, keyOrId, idx = null) => {
         document.getElementById('placeholder').style.display = 'none';
         document.getElementById('infoContent').style.display = 'block';
         
-        document.getElementById('viewTitle').innerText = ev.text;
-        const dateParts = selectedDateKey.split('-');
-        document.getElementById('viewDate').innerText = `${dateParts[0]}년 ${dateParts[1]}월 ${dateParts[2]}일`;
-        document.getElementById('memoInput').value = ev.rubricText || "";
+        const badge = document.getElementById('infoCategoryBadge');
+        const editor = document.getElementById('rubricEditor');
+        const actionArea = document.getElementById('actionButtonGroup');
         
-        const grid = document.getElementById('imageGrid');
-        grid.innerHTML = '';
+        let targetData = null;
         
-        // 📸 사진 데이터 처리 (복구된 핵심 로직)
-        let imgList = ev.images || [];
-
-        if (imgList.length === 0) {
-            grid.innerHTML = `<p style="color:#cbd5e1; font-size:0.85rem; grid-column: 1/-1; text-align:center; padding: 20px 0;">등록된 기준표 이미지가 없습니다.</p>`;
-        } else {
-            imgList.forEach((src, imgIdx) => {
-                // 개별 삭제 버튼 포함 (CSS에서 has-edit-auth로 제어됨)
-                const deleteBtnHtml = `<button class="img-delete-btn" onclick="deleteSinglePhoto(${imgIdx}, event)">✕</button>`;
-                grid.innerHTML += `
-                    <div class="image-wrapper">
-                        <img src="${src}" onclick="window.open('${src}')" title="클릭하면 큰 이미지로 확인합니다.">
-                        ${deleteBtnHtml}
+        if (mode === 'calendar') {
+            selectedDateKey = keyOrId; selectedIndex = idx; selectedBankId = null;
+            targetData = remoteEvents[selectedDateKey][selectedIndex];
+            
+            badge.innerText = "학급 일정"; badge.style.background = var(--accent);
+            document.getElementById('viewTitle').innerText = targetData.text;
+            document.getElementById('viewDateOrSubject').innerText = `일정일: ${selectedDateKey} (${currentGrade}학년 ${currentClass}반)`;
+            
+            // 편집 권한 방어막
+            if (isManager) {
+                editor.setAttribute('contenteditable', 'true');
+                actionArea.innerHTML = `
+                    <div class="btn-group">
+                        <label for="fileInput" class="btn btn-upload">📷 관련 사진 추가</label>
+                        <input type="file" id="fileInput" accept="image/*" multiple onchange="handleImageStreamUpload('calendar')">
+                        <button class="btn btn-save" onclick="saveActiveData('calendar')">💾 학급 일정 변경 저장</button>
                     </div>
-                `;
+                    <div class="btn-group" style="margin-top:8px;">
+                        <button class="btn" style="background:#f1f5f9; color:var(--text);" onclick="modifyTitle('calendar')">✏️ 제목 수정</button>
+                        <button class="btn btn-delete" onclick="deleteTargetItem('calendar')">🗑️ 이 일정 삭제</button>
+                    </div>`;
+            } else {
+                editor.setAttribute('contenteditable', 'false');
+                actionArea.innerHTML = `<p style="font-size:0.8rem; color:#94a3b8; text-align:center; margin:0;">ℹ️ 일반 학생은 보기만 가능하며 수정을 요청할 수 없습니다.</p>`;
+            }
+            document.querySelectorAll('.event-item').forEach(el => el.classList.remove('selected'));
+            const targetEl = document.getElementById(`cal-${selectedDateKey}-${selectedIndex}`);
+            if(targetEl) targetEl.classList.add('selected');
+
+        } else if (mode === 'bank') {
+            selectedBankId = keyOrId; selectedDateKey = null; selectedIndex = null;
+            targetData = remoteBankItems[selectedBankId];
+            
+            badge.innerText = "마스터 보관함"; badge.style.background = var(--bank-color);
+            document.getElementById('viewTitle').innerText = targetData.text;
+            
+            const targetGrade = isTeacher ? document.getElementById('bankGradeSel').value : currentGrade;
+            const term = document.getElementById('bankTermSel').value;
+            const sub = document.getElementById('bankSubjectSel').value;
+            document.getElementById('viewDateOrSubject').innerText = `분류: ${targetGrade}학년 > ${term} > ${sub}`;
+
+            if (isTeacher) {
+                editor.setAttribute('contenteditable', 'true');
+                actionArea.innerHTML = `
+                    <div class="btn-group">
+                        <label for="fileInput" class="btn btn-upload">📷 마스터 사진 등록</label>
+                        <input type="file" id="fileInput" accept="image/*" multiple onchange="handleImageStreamUpload('bank')">
+                        <button class="btn btn-bank" onclick="saveActiveData('bank')">💾 마스터 보관함 저장</button>
+                    </div>
+                    <div class="btn-group" style="margin-top:8px;">
+                        <button class="btn" style="background:#f1f5f9; color:var(--text);" onclick="modifyTitle('bank')">✏️ 평가명 수정</button>
+                        <button class="btn btn-delete" onclick="deleteTargetItem('bank')">🗑️ 보관함에서 삭제</button>
+                    </div>`;
+            } else {
+                editor.setAttribute('contenteditable', 'false');
+                actionArea.innerHTML = `<p style="font-size:0.8rem; color:var(--bank-color); text-align:center; margin:0; font-weight:bold;">ℹ️ 교사 전용 마스터 데이터 보관소입니다 (수정 불가).</p>`;
+            }
+            loadBankList();
+        }
+
+        // 데이터 표 및 텍스트 렌더링
+        editor.innerHTML = targetData.rubricHtml || "";
+        
+        // 사진 갤러리 처리
+        const imgGrid = document.getElementById('imageGrid');
+        imgGrid.innerHTML = '';
+        const streamImages = targetData.images || [];
+
+        if (streamImages.length === 0) {
+            imgGrid.innerHTML = `<p style="color:#cbd5e1; font-size:0.8rem; grid-column:1/-1; text-align:center; padding:15px 0; margin:0;">등록된 시각 자료(사진)가 없습니다.</p>`;
+        } else {
+            streamImages.forEach((src, imgIdx) => {
+                const canEdit = (mode === 'calendar' && isManager) || (mode === 'bank' && isTeacher);
+                const delBtn = canEdit ? `<button class="img-delete-btn" onclick="removeSingleImage('${mode}', ${imgIdx}, event)">✕</button>` : '';
+                imgGrid.innerHTML += `
+                    <div class="image-wrapper">
+                        <img src="${src}" onclick="window.open('${src}')" title="클릭 시 크게 보기">
+                        ${delBtn}
+                    </div>`;
             });
         }
-        
-        // 달력 아이템 선택 스타일 처리
-        document.querySelectorAll('.event-item').forEach(el => el.classList.remove('selected'));
-        const target = document.getElementById(`ev-${selectedDateKey}-${selectedIndex}`);
-        if(target) target.classList.add('selected');
-    }
-
-    // 💾 내용 저장 (텍스트 메모)
-    window.saveData = () => {
-        if(!isManager) return;
-        const memo = document.getElementById('memoInput').value;
-        remoteEvents[selectedDateKey][selectedIndex].rubricText = memo;
-        db.ref(`grade_${currentGrade}/class_${currentClass}/events`).set(remoteEvents);
-        alert("평가 루브릭 및 메모가 안전하게 저장되었습니다.");
     };
 
-    window.editTitle = () => {
-        if(!isManager) return;
-        const newTitle = prompt("수정할 수행평가 제목을 입력하세요:", remoteEvents[selectedDateKey][selectedIndex].text);
-        if(newTitle) {
-            remoteEvents[selectedDateKey][selectedIndex].text = newTitle;
-            db.ref(`grade_${currentGrade}/class_${currentClass}/events`).set(remoteEvents);
+    // 💾 통합 저장 프로세스
+    window.saveActiveData = (mode) => {
+        const htmlPayload = document.getElementById('rubricEditor').innerHTML;
+        if (mode === 'calendar') {
+            if(!isManager) return;
+            remoteEvents[selectedDateKey][selectedIndex].rubricHtml = htmlPayload;
+            db.ref(dbCalListener).set(remoteEvents);
+            alert("학급 달력 서식이 업데이트 되었습니다.");
+        } else if (mode === 'bank') {
+            if(!isTeacher) return;
+            remoteBankItems[selectedBankId].rubricHtml = htmlPayload;
+            db.ref(dbBankListener).set(remoteBankItems);
+            alert("마스터 보관함 원본 데이터가 변경되었습니다.");
         }
     };
 
-    // 📷 사진 다중 업로드 함수 (복구된 핵심 기능)
-    window.uploadPhotos = (e) => {
-        if(!isManager) return;
-        const files = Array.from(e.target.files);
-        if (files.length === 0) return;
+    // ✏️ 제목 수정 공통 로직
+    window.modifyTitle = (mode) => {
+        if (mode === 'calendar' && isManager) {
+            const nt = prompt("변경할 일정 제목:", remoteEvents[selectedDateKey][selectedIndex].text);
+            if(nt) { remoteEvents[selectedDateKey][selectedIndex].text = nt; db.ref(dbCalListener).set(remoteEvents); showDetails('calendar', selectedDateKey, selectedIndex); }
+        } else if (mode === 'bank' && isTeacher) {
+            const nt = prompt("변경할 마스터 평가명:", remoteBankItems[selectedBankId].text);
+            if(nt) { remoteBankItems[selectedBankId].text = nt; db.ref(dbBankListener).set(remoteBankItems); showDetails('bank', selectedBankId); }
+        }
+    };
 
-        // 기존 사진 배열이 없으면 새로 생성
-        if (!remoteEvents[selectedDateKey][selectedIndex].images) {
-            remoteEvents[selectedDateKey][selectedIndex].images = [];
+    // 📷 이미지 다중 데이터 로더 & 파일 업로드 스트림
+    window.handleImageStreamUpload = (mode) => {
+        const files = Array.from(document.getElementById('fileInput').value ? document.getElementById('fileInput').files : []);
+        if(files.length === 0) return;
+
+        let targetRef = null;
+        if (mode === 'calendar') {
+            if (!remoteEvents[selectedDateKey][selectedIndex].images) remoteEvents[selectedDateKey][selectedIndex].images = [];
+            targetRef = remoteEvents[selectedDateKey][selectedIndex].images;
+        } else {
+            if (!remoteBankItems[selectedBankId].images) remoteBankItems[selectedBankId].images = [];
+            targetRef = remoteBankItems[selectedBankId].images;
         }
 
-        let loaded = 0;
-        const currentEventImages = remoteEvents[selectedDateKey][selectedIndex].images;
-
-        files.forEach(file => {
+        let completeCount = 0;
+        files.forEach(f => {
             const reader = new FileReader();
-            reader.onload = (ev) => {
-                // base64 데이터를 배열에 추가
-                currentEventImages.push(ev.target.result);
-                loaded++;
-                // 모든 사진이 로드되면 DB에 한 번에 저장
-                if (loaded === files.length) {
-                    db.ref(`grade_${currentGrade}/class_${currentClass}/events`).set(remoteEvents);
-                    updateSidePanel(); // 화면 갱신
-                    // 파일 입력창 초기화 (같은 사진 다시 올릴 수 있게)
-                    e.target.value = '';
+            reader.onload = (uploadEvent) => {
+                targetRef.push(uploadEvent.target.result);
+                completeCount++;
+                if (completeCount === files.length) {
+                    if (mode === 'calendar') {
+                        db.ref(dbCalListener).set(remoteEvents);
+                        showDetails('calendar', selectedDateKey, selectedIndex);
+                    } else {
+                        db.ref(dbBankListener).set(remoteBankItems);
+                        showDetails('bank', selectedBankId);
+                    }
                 }
             };
-            reader.readAsDataURL(file);
+            reader.readAsDataURL(f);
         });
     };
 
-    // ✕ 사진 개별 삭제 함수 (복구된 핵심 기능)
-    window.deleteSinglePhoto = (imgIdx, e) => {
-        if(!isManager) return;
-        e.stopPropagation(); // 이미지 클릭 이벤트 전파 방지
-        if (confirm("이 기준표 이미지를 삭제하시겠습니까?")) {
-            // 배열에서 해당 인덱스 삭제
+    // ✕ 개별 이미지 스트림 요소 삭제
+    window.removeSingleImage = (mode, imgIdx, e) => {
+        e.stopPropagation();
+        if(!confirm("이 시각 자료 사진을 삭제할까요?")) return;
+        
+        if (mode === 'calendar') {
             remoteEvents[selectedDateKey][selectedIndex].images.splice(imgIdx, 1);
-            db.ref(`grade_${currentGrade}/class_${currentClass}/events`).set(remoteEvents);
-            updateSidePanel(); // 화면 갱신
+            db.ref(dbCalListener).set(remoteEvents);
+            showDetails('calendar', selectedDateKey, selectedIndex);
+        } else {
+            remoteBankItems[selectedBankId].images.splice(imgIdx, 1);
+            db.ref(dbBankListener).set(remoteBankItems);
+            showDetails('bank', selectedBankId);
         }
     };
 
-    window.deleteEvent = () => {
-        if(!isManager) return;
-        if(confirm("이 수행평가 일정을 통째로 삭제하시겠습니까? (등록된 사진도 함께 삭제됩니다.)")) {
+    // 🗑️ 일정 또는 보관함 아이템 파괴 로직
+    window.deleteTargetItem = (mode) => {
+        if(!confirm("해당 데이터를 정말 삭제 처리하시겠습니까? 관련 사진도 영구 파괴됩니다.")) return;
+        
+        if (mode === 'calendar') {
             remoteEvents[selectedDateKey].splice(selectedIndex, 1);
             if(remoteEvents[selectedDateKey].length === 0) delete remoteEvents[selectedDateKey];
-            db.ref(`grade_${currentGrade}/class_${currentClass}/events`).set(remoteEvents);
-            
-            // 상세창 초기화
-            selectedDateKey = null; selectedIndex = null;
-            document.getElementById('infoContent').style.display = 'none';
-            document.getElementById('placeholder').style.display = 'block';
+            db.ref(dbCalListener).set(remoteEvents);
+        } else {
+            delete remoteBankItems[selectedBankId];
+            db.ref(dbBankListener).set(remoteBankItems);
         }
+        resetRightPanel();
     };
 
-    // ⚠️ 오직 교사만 가능한 반 전체 초기화
-    window.resetAllData = () => {
+    // ➕ 교사용 마스터 보관함 아이템 생성
+    window.createNewBankItem = () => {
         if(!isTeacher) return;
-        if (confirm(`⚠️ 대경고: [${currentGrade}학년 ${currentClass}반]의 모든 일정이 영구 파괴됩니다. 진행하시겠습니까?`)) {
-            db.ref(`grade_${currentGrade}/class_${currentClass}/events`).set(null).then(() => {
-                alert("반 전체 달력이 완전히 초기화되었습니다.");
-                location.reload();
-            });
+        const entryName = prompt("새로 아카이브할 마스터 수행평가명을 기입하세요:");
+        if (entryName) {
+            const newId = "bank_" + Date.now();
+            if(!remoteBankItems) remoteBankItems = {};
+            remoteBankItems[newId] = { text: entryName, rubricHtml: "", images: [] };
+            db.ref(dbBankListener).set(remoteBankItems);
         }
     };
 
-    window.changeMonth = (v) => { currentDate.setMonth(currentDate.getMonth() + v); renderCalendar(); };
+    // ⚠️ 반 전체 일정 파괴 (교사 전용)
+    window.resetClassData = () => {
+        if(!isTeacher) return;
+        if(confirm(`⚠️ 대경고: [${currentGrade}학년 ${currentClass}반] 학급 달력의 모든 일정을 소멸시킵니다. 계속하시겠습니까?`)) {
+            db.ref(dbCalListener).set(null).then(() => { alert("학급 데이터가 초기화되었습니다."); location.reload(); });
+        }
+    };
+
+    // 📦 모달 기능 스크립트 (가져오기 기능 제어 영역)
+    function closeImportModal() { document.getElementById('bankImportModal').style.display = 'none'; }
+    
+    function loadModalBankList() {
+        const term = document.getElementById('modalTermSel').value;
+        const subject = document.getElementById('modalSubjectSel').value;
+        
+        db.ref(`master_bank/grade_${currentGrade}/${term}/${subject}`).once("value", (snap) => {
+            const data = snap.val() || {};
+            const area = document.getElementById('modalBankListArea');
+            area.innerHTML = '';
+            
+            const keys = Object.keys(data);
+            if(keys.length === 0) {
+                area.innerHTML = `<p style="text-align:center; font-size:0.85rem; color:#94a3b8; padding:20px 0;">가져올 수 있는 마스터 데이터가 없습니다.</p>`;
+                return;
+            }
+            
+            keys.forEach(id => {
+                area.innerHTML += `
+                    <div class="bank-item" style="padding:10px 14px;" onclick="executeImport('${term}','${subject}','${id}')">
+                        <span style="font-weight:700;">${data[id].text}</span>
+                        <button class="btn btn-bank" style="padding:4px 10px; font-size:0.75rem; flex:none;">가져오기</button>
+                    </div>`;
+            });
+        });
+    }
+
+    // 🌟 [핵심 연동 브릿지] 교사 보관함 ➔ 학급 일정 복사 로직
+    window.executeImport = (term, subject, bankId) => {
+        db.ref(`master_bank/grade_${currentGrade}/${term}/${subject}/${bankId}`).once("value", (snap) => {
+            const source = snap.val();
+            if(source) {
+                if(!remoteEvents[targetModalDateKey]) remoteEvents[targetModalDateKey] = [];
+                
+                // 🚀 깊은 복사를 통한 마스터 데이터 이전 (제목, 복붙된 표 HTML, 사진 배열까지 통째로 복사)
+                remoteEvents[targetModalDateKey].push({
+                    text: `[${subject}] ${source.text}`,
+                    rubricHtml: source.rubricHtml || "",
+                    images: source.images ? [...source.images] : []
+                });
+                
+                db.ref(dbCalListener).set(remoteEvents).then(() => {
+                    closeImportModal();
+                    alert(`[${subject}] 평가 자료가 우리 반 달력에 정상 연동 복사되었습니다.`);
+                    // 복사 후 바로 그 창 띄워주기
+                    showDetails('calendar', targetModalDateKey, remoteEvents[targetModalDateKey].length - 1);
+                });
+            }
+        });
+    };
+
+    window.changeMonth = (v) => { currentDate.setMonth(currentDate.getMonth() + v); renderCalendarLayout(); resetRightPanel(); };
     document.getElementById('studentIdInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') loginStudent(); });
     document.getElementById('teacherPwInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') loginTeacher(); });
 </script>
